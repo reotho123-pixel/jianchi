@@ -1,0 +1,18 @@
+{
+  "name": "坚持",
+  "short_name": "坚持",
+  "description": "英语 · 健身 · 戒撸，简单快速的打卡坚持工具",
+  "start_url": "./",
+  "scope": "./",
+  "id": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F6F6F4",
+  "theme_color": "#F6F6F4",
+  "lang": "zh-CN",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

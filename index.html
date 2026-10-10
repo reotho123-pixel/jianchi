@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>坚持</title>
+<meta name="theme-color" content="#F6F6F4">
+<meta name="description" content="英语 · 健身 · 戒撸，简单快速的打卡坚持工具">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="坚持">
+<link rel="stylesheet" href="./fonts/lxgwwenkai-light.css">
+<style>
+@property --p{syntax:"<number>";inherits:false;initial-value:0}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#F6F6F4;--ink:#1A1A1A;--muted:#9A9A94;--line:#E9E9E4;
+  --soft:#2E2E2E;--white:#fff;
+  --green:#DDEBCB;--purple:#DED8EF;--blue:#CFE0EF;
+  --empty:#EDEDE8;--relapse:#E0A8A8;--amber:#C79A55;--restc:#8E8E86;
+  --tabbar-h:66px;
+}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:radial-gradient(125% 58% at 50% 0%,#FCFCFA 0%,#F6F6F4 64%);
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:"LXGW WenKai","Kaiti SC","STKaiti",KaiTi,"PingFang SC","Microsoft YaHei",serif;
+  font-weight:300;line-height:1.5;-webkit-font-smoothing:antialiased;
+  overscroll-behavior-y:none;
+}
+h1,h2,h3,h4,h5,h6,b,strong,th,legend{font-weight:300}
+button,input,textarea{font-family:inherit;font-weight:300;color:inherit}
+button{cursor:pointer;border:0;background:none}
+::-webkit-scrollbar{width:0;height:0}
+
+#view{
+  max-width:480px;margin:0 auto;
+  padding:46px 18px calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 30px);
+  min-height:100vh;
+}
+.sb{display:flex;justify-content:space-between;font-size:14px;color:#5A5A5A;margin-bottom:14px;font-variant-numeric:tabular-nums}
+.sb-r{display:flex;align-items:center;gap:6px;font-size:12px}
+.sb-bat{width:22px;height:11px;border:1.5px solid currentColor;border-radius:3px;position:relative}
+.sb-bat::before{content:"";position:absolute;left:1.5px;top:1.5px;bottom:1.5px;width:66%;background:currentColor;border-radius:1px}
+
+/* ---------- 顶部 ---------- */
+.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:15px}
+.ava{width:42px;height:42px;border-radius:50%;background:var(--soft);color:#fff;display:grid;place-items:center;font-size:16px}
+.topr{display:flex;align-items:center;gap:9px}
+.icb{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:16px}
+.icb.plus{background:var(--soft);color:#fff;font-size:21px;line-height:1}
+.icb.bell{background:var(--purple);position:relative}
+.icb.bell::after{content:"";position:absolute;top:9px;right:10px;width:6px;height:6px;border-radius:50%;background:var(--ink)}
+
+.h1{margin:0 0 4px;font-size:34px;line-height:1.1;letter-spacing:-.5px}
+.date{margin:0 0 16px;font-size:13.5px;color:var(--muted)}
+.sum{display:flex;align-items:baseline;gap:10px;margin-bottom:18px}
+.sum-n{font-size:38px;line-height:1;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.sum-n i{font-style:normal;font-size:19px;color:var(--muted)}
+.sum-l{font-size:13.5px;color:var(--muted);padding-bottom:4px}
+.sum-l.done{color:var(--ink)}
+
+/* ---------- 习惯卡 ---------- */
+.card{
+  position:relative;border-radius:26px;margin-bottom:20px;
+  padding:18px 19px 17px;
+  background:linear-gradient(142deg,var(--c1) 0%,var(--c2) 100%);
+  box-shadow:0 6px 18px rgba(26,26,26,.075);
+  border:1.5px dashed rgba(255,255,255,.88);
+  transform:rotate(-.5deg);
+}
+.card.rr{transform:rotate(.55deg)}
+.card:first-of-type{margin-top:6px}
+.card.excused{background:linear-gradient(142deg,#EDEDE8 0%,#F5F5F1 100%)}
+.wm{position:absolute;right:-4px;top:-10px;font-size:56px;opacity:.16;transform:rotate(13deg);pointer-events:none;z-index:0}
+.ctop{display:flex;align-items:flex-start;gap:12px;position:relative;z-index:1}
+.ic{width:44px;height:44px;border-radius:15px;background:rgba(255,255,255,.88);font-size:20px;display:grid;place-items:center;box-shadow:0 3px 9px rgba(26,26,26,.07);transform:rotate(-3deg);flex:0 0 auto}
+.cname{font-size:19.5px;line-height:1.3}
+.cmeta{font-size:12.5px;color:rgba(26,26,26,.58);margin-top:4px}
+.hl{position:relative;display:inline-block}
+.hl::before{content:"";position:absolute;left:-3px;right:-3px;bottom:1px;height:11px;background:rgba(174,203,82,.42);border-radius:5px;z-index:-1}
+.hl.p::before{background:rgba(156,143,208,.36)}
+.hl.b::before{background:rgba(127,168,201,.36)}
+.bignum{font-size:31px;line-height:1;letter-spacing:-1px;font-variant-numeric:tabular-nums;white-space:nowrap;position:relative;z-index:1}
+.bignum em{font-style:normal;font-size:13.5px;color:rgba(26,26,26,.55)}
+
+.pbar{height:9px;border-radius:99px;background:rgba(255,255,255,.72);margin-top:14px;overflow:hidden;position:relative;z-index:1}
+.pbar i{display:block;height:100%;border-radius:99px;background:var(--deep)}
+.plabel{display:flex;justify-content:space-between;font-size:12px;color:rgba(26,26,26,.58);margin-top:8px;position:relative;z-index:1}
+
+/* 七日条 */
+.wk{display:flex;align-items:center;gap:5px;margin-top:13px;position:relative;z-index:1}
+.wk i{flex:1;height:7px;border-radius:99px;background:rgba(255,255,255,.62);display:block;box-shadow:inset 0 0 0 1px rgba(255,255,255,.5)}
+.wk i.on{background:var(--deep);box-shadow:none}
+.wk i.rest{background:repeating-linear-gradient(48deg,#8E8E86 0 3.5px,#C4C4BC 3.5px 7px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)}
+.wk i.leave{background:repeating-linear-gradient(48deg,#C79A55 0 3.5px,#EBD9B8 3.5px 7px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.45)}
+.wk i.relapse{background:var(--relapse);box-shadow:none}
+.wk i.today{box-shadow:inset 0 0 0 1.4px rgba(26,26,26,.28)}
+.wk em{font-style:normal;font-size:10.5px;color:rgba(26,26,26,.45);margin-left:4px;white-space:nowrap}
+
+/* 按钮 */
+.btnrow{display:flex;gap:9px;margin-top:14px;position:relative;z-index:1}
+.btnrow button{flex:1;padding:12px 0;border-radius:999px;font-size:13.5px;background:rgba(255,255,255,.8);box-shadow:0 2px 7px rgba(26,26,26,.055)}
+.btnrow button:active{background:#fff}
+.btnrow .wide{flex:1.42;background:#fff;box-shadow:0 3px 10px rgba(26,26,26,.075)}
+.btnrow .ghost{background:rgba(255,255,255,.46);box-shadow:inset 0 0 0 1.3px rgba(255,255,255,.92)}
+.btnrow button.dis{opacity:.42;cursor:not-allowed;background:rgba(255,255,255,.34);box-shadow:inset 0 0 0 1.3px rgba(255,255,255,.6)}
+.btnrow.pad{padding-right:64px}
+
+/* 印章 */
+.stamp{
+  position:absolute;right:16px;bottom:15px;width:52px;height:52px;border-radius:50%;
+  border:1.7px dashed rgba(95,138,42,.6);color:#5F8A2A;display:grid;place-items:center;
+  font-size:10px;line-height:1.2;text-align:center;transform:rotate(-13deg);
+  background:rgba(255,255,255,.46);z-index:1;
+}
+.stamp.blue{border-color:rgba(70,130,170,.58);color:#4A7FA5}
+.stamp.gray{border-color:rgba(26,26,26,.22);color:rgba(26,26,26,.42);font-size:9.5px}
+.stamp.amber{border-color:rgba(160,115,50,.6);color:#96682A}
+
+/* 休息日 / 请假 */
+.excusechip{
+  display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:5px 11px;border-radius:999px;
+  background:rgba(255,255,255,.9);border:1.3px dashed rgba(26,26,26,.2);margin-top:9px;position:relative;z-index:1;
+}
+.noteq{
+  font-size:11.5px;color:rgba(26,26,26,.55);margin-top:9px;padding:7px 11px;border-radius:11px;
+  background:rgba(255,255,255,.66);border-left:2.5px solid rgba(26,26,26,.14);position:relative;z-index:1;line-height:1.5;
+}
+.quotahint{
+  font-size:11px;color:rgba(26,26,26,.5);margin-top:9px;position:relative;z-index:1;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+}
+.quotahint b{color:rgba(26,26,26,.72)}
+.dots{display:flex;gap:3px}
+.dots i{width:6px;height:6px;border-radius:50%;background:rgba(26,26,26,.18);display:block}
+.dots i.used{background:#9C8FD0}
+.dots i.usedL{background:#C79A55}
+
+/* ---------- 统计卡 ---------- */
+.sect{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:20px 2px 11px}
+.sect::before{content:"";width:6px;height:6px;border-radius:50%;background:#C6DFA4}
+.stats{display:flex;gap:11px}
+.stat{
+  flex:1;border-radius:22px;padding:15px;background:rgba(255,255,255,.95);
+  box-shadow:0 5px 16px rgba(26,26,26,.07);border:1.4px dashed rgba(26,26,26,.09);
+}
+.stat.tint{background:linear-gradient(142deg,#DDEBCB,#EDF5E1)}
+.stat-l{font-size:11.5px;color:var(--muted);margin-bottom:9px}
+.stat.tint .stat-l{color:rgba(26,26,26,.5)}
+.stat-v{font-size:25px;line-height:1;font-variant-numeric:tabular-nums}
+.stat-v span{font-size:12px;color:var(--muted);margin-left:3px}
+.stat.tint .stat-v span{color:rgba(26,26,26,.5)}
+.bars{display:flex;align-items:flex-end;gap:5px;height:30px;margin-bottom:8px}
+.bars i{flex:1;border-radius:4px;background:#C6DFA4;display:block}
+.bars i.off{background:#E9E9E4}
+.bars i.rest{background:repeating-linear-gradient(48deg,#8E8E86 0 3.5px,#C4C4BC 3.5px 7px)}
+.bars i.leave{background:repeating-linear-gradient(48deg,#C79A55 0 3.5px,#EBD9B8 3.5px 7px)}
+.bars i.relapse{background:var(--relapse)}
+.legend2{display:flex;gap:12px;font-size:11px;color:var(--muted);margin-top:12px;justify-content:center;flex-wrap:wrap}
+.legend2 span{display:flex;align-items:center;gap:5px}
+.legend2 i{width:14px;height:6px;border-radius:99px;display:block}
+
+/* ---------- 记录页 ---------- */
+.rhead{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.rhead .rtitle{flex:1;text-align:center;font-size:19px}
+.rhead .ava{flex:0 0 auto}
+.fpills{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;margin-bottom:14px}
+.fpill{padding:7px 14px;border-radius:999px;background:var(--white);font-size:12.5px;white-space:nowrap;box-shadow:0 1px 4px rgba(26,26,26,.05)}
+.fpill.on{background:var(--soft);color:#fff;box-shadow:none}
+.calrow{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.mpill{flex:1;display:flex;align-items:center;gap:9px;padding:7px 8px 7px 15px;border-radius:999px;background:var(--white);font-size:14px;font-variant-numeric:tabular-nums;min-width:0;box-shadow:0 2px 8px rgba(26,26,26,.05)}
+.mpill .mico{flex:0 0 auto;color:var(--muted);display:grid;place-items:center}
+.mpill .msp{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mpill .mnav{width:32px;height:32px;border-radius:50%;font-size:15px;color:var(--muted);flex:0 0 auto}
+.mpill .mnav:disabled{opacity:.26}
+.todaybtn{width:46px;height:46px;border-radius:50%;background:var(--soft);color:#fff;flex:0 0 auto;display:grid;place-items:center}
+.calwrap{background:rgba(255,255,255,.95);border-radius:24px;padding:16px 14px;border:1.4px dashed rgba(26,26,26,.09);box-shadow:0 5px 16px rgba(26,26,26,.06)}
+.calwk{display:grid;grid-template-columns:repeat(7,1fr);gap:7px;margin-bottom:9px}
+.calwk span{text-align:center;font-size:11.5px;color:var(--muted)}
+.cgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+.ccell{
+  position:relative;aspect-ratio:1;border-radius:50%;background:var(--empty);
+  display:grid;place-items:center;font-size:13px;font-variant-numeric:tabular-nums;
+}
+.ccell.blank{background:none}
+.ccell.future{opacity:.26}
+.ccell.today{box-shadow:inset 0 0 0 1.5px rgba(26,26,26,.5)}
+.ccell.sel{box-shadow:inset 0 0 0 2.5px var(--ink)}
+.ccell.today.sel{box-shadow:inset 0 0 0 2.5px var(--ink)}
+.ccell .cn{position:relative;z-index:2}
+.crings{position:absolute;inset:0;display:block;pointer-events:none;z-index:1}
+.crings i{position:absolute;border-radius:50%;inset:calc(var(--ri) * var(--step) + var(--pad));background:var(--rc)}
+.crings i.rest{background:repeating-linear-gradient(48deg,#8E8E86 0 2.5px,#C4C4BC 2.5px 5px)}
+.crings i.leave{background:repeating-linear-gradient(48deg,#C79A55 0 2.5px,#EBD9B8 2.5px 5px)}
+.crings .ccore{position:absolute;border-radius:50%;inset:calc(var(--ci) * var(--step) + var(--pad));background:var(--empty)}
+.cellstriped{background:repeating-linear-gradient(48deg,#E4E4DE 0 4px,#EFEFEA 4px 8px) !important}
+.cellstriped.leave{background:repeating-linear-gradient(48deg,#EBD9B8 0 4px,#F5EDDC 4px 8px) !important}
+.cellstriped.rest{background:repeating-linear-gradient(48deg,#DCDCD6 0 4px,#EDEDE8 4px 8px) !important}
+.cellstriped.today{box-shadow:inset 0 0 0 1.5px rgba(26,26,26,.5)}
+.calhint{margin-top:13px;font-size:11.5px;color:var(--muted);text-align:center;line-height:1.65}
+.calmore{margin-top:12px;text-align:center}
+.linkbtn{font-size:12px;color:var(--muted);text-decoration:underline;text-underline-offset:3px;padding:6px 8px}
+.linkbtn:active{color:var(--ink)}
+.dcard{position:relative;border-radius:26px;padding:19px 20px 23px;margin-top:20px;background:var(--green);border:1.4px dashed rgba(255,255,255,.9);box-shadow:0 6px 18px rgba(26,26,26,.07)}
+.dchead{display:flex;align-items:baseline;gap:10px;margin-bottom:13px;padding:0 2px}
+.dchead .dct{flex:1;font-size:16.5px}
+.dchead .dcn{font-size:12.5px;color:rgba(26,26,26,.55);font-variant-numeric:tabular-nums}
+.drow{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:17px;background:rgba(255,255,255,.7)}
+.drow .dico{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;font-size:15px;background:var(--hicon);flex:0 0 auto}
+.drow .dmain{flex:1;min-width:0}
+.drow .dnm{display:block;font-size:13.5px}
+.drow .dst{display:block;font-size:11.5px;color:rgba(26,26,26,.5);margin-top:2px;font-variant-numeric:tabular-nums}
+.drow .dact{font-size:12px;padding:7px 12px;border-radius:999px;background:#fff;flex:0 0 auto}
+.drow .dact.off{opacity:.35}
+.statcard{background:linear-gradient(142deg,#DDEBCB,#EDF5E1);border-radius:24px;padding:18px;margin-top:16px;border:1.4px dashed rgba(255,255,255,.9);box-shadow:0 5px 16px rgba(26,26,26,.06)}
+.srow{display:flex;text-align:center}
+.srow>div{flex:1;min-width:0}
+.srow>div+div{border-left:1px solid rgba(26,26,26,.1)}
+.srow b{display:block;font-size:25px;line-height:1.15;font-variant-numeric:tabular-nums;letter-spacing:-.6px}
+.srow b em{font-style:normal;font-size:13px;color:rgba(26,26,26,.5)}
+.srow span{display:block;font-size:11.5px;color:rgba(26,26,26,.5);margin-top:7px}
+.srow2{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;margin-top:15px;padding-top:14px;border-top:1px solid rgba(26,26,26,.1);color:rgba(26,26,26,.5);flex-wrap:wrap}
+.srow2 b{color:var(--ink);font-variant-numeric:tabular-nums}
+.msum{margin-top:14px;font-size:13.5px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:center}
+.msum b{color:var(--ink)}
+
+/* ---------- 我的页 ---------- */
+.list{background:rgba(255,255,255,.95);border-radius:24px;overflow:hidden;border:1.4px dashed rgba(26,26,26,.09);box-shadow:0 5px 16px rgba(26,26,26,.06)}
+.lrow{display:flex;align-items:center;gap:13px;padding:16px 18px;width:100%;text-align:left}
+.lrow+.lrow{border-top:1px solid var(--line)}
+.lrow .lico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:18px;flex:0 0 auto;background:var(--cardbg)}
+.lrow .lmain{flex:1;min-width:0}
+.lrow .lname{display:block;font-size:15.5px}
+.lrow .lsub{display:block;font-size:12px;color:var(--muted);margin-top:3px}
+.lrow .larr{font-size:13px;color:var(--muted);flex:0 0 auto}
+.lrow .lup{display:flex;gap:4px;flex:0 0 auto}
+.lrow .lup button{width:30px;height:30px;border-radius:50%;background:rgba(26,26,26,.05);font-size:13px;color:var(--muted)}
+.lrow .lup button:disabled{opacity:.3}
+.addbtn{display:block;width:100%;margin-top:11px;padding:15px 0;border-radius:999px;background:rgba(255,255,255,.95);font-size:14.5px;border:1.4px dashed rgba(26,26,26,.1);box-shadow:0 4px 14px rgba(26,26,26,.06)}
+.warn{color:#B4733F}
+.foot{font-size:11.5px;color:var(--muted);text-align:center;margin-top:26px;line-height:1.8}
+.danger{display:block;width:100%;margin-top:11px;padding:15px 0;border-radius:999px;background:rgba(255,255,255,.95);font-size:14.5px;color:#B4733F;border:1.4px dashed rgba(180,115,63,.25)}
+.empty{background:rgba(255,255,255,.95);border-radius:24px;padding:30px 20px;text-align:center;font-size:14px;color:var(--muted);border:1.4px dashed rgba(26,26,26,.1)}
+.empty .pbtn{margin-top:14px}
+
+/* ---------- 底部导航（滑动胶囊） ---------- */
+#tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:40;
+  padding:10px 18px calc(14px + env(safe-area-inset-bottom));
+  background:linear-gradient(to top,var(--bg) 62%,rgba(246,246,244,0));
+  pointer-events:none;
+}
+.navin{
+  position:relative;max-width:444px;margin:0 auto;display:flex;
+  background:var(--soft);border-radius:999px;padding:7px;pointer-events:auto;
+  box-shadow:0 8px 22px rgba(26,26,26,.2);
+}
+.navin .thumb{
+  position:absolute;top:7px;bottom:7px;left:7px;width:calc((100% - 14px) / 3);
+  border-radius:999px;background:#fff;transition:transform .28s cubic-bezier(.3,.8,.3,1);
+  box-shadow:inset 0 0 0 1.4px rgba(26,26,26,.1);
+}
+.navin button{position:relative;z-index:1;flex:1;font-size:13.5px;color:rgba(255,255,255,.6);padding:12px 0;border-radius:999px;transition:color .22s ease}
+.navin button.on{color:var(--ink)}
+
+/* ---------- 弹层 ---------- */
+.mask{position:fixed;inset:0;background:rgba(26,26,26,.32);z-index:50;opacity:0;transition:opacity .24s ease}
+.mask.show{opacity:1}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:51;max-width:480px;margin:0 auto;
+  background:var(--bg);border-radius:30px 30px 0 0;padding:10px 20px calc(22px + env(safe-area-inset-bottom));
+  transform:translateY(102%);transition:transform .3s cubic-bezier(.22,.7,.3,1);
+  max-height:90vh;overflow-y:auto;
+}
+.sheet.show{transform:translateY(0)}
+.grip{width:38px;height:4px;border-radius:99px;background:#D8D8D2;margin:4px auto 16px}
+.shtitle{font-size:19px}
+.shsub{font-size:13px;color:var(--muted);margin-top:5px;margin-bottom:16px;line-height:1.6}
+.bignum2{text-align:center;font-size:58px;line-height:1;letter-spacing:-2px;font-variant-numeric:tabular-nums;margin:6px 0 20px}
+.bignum2 span{font-size:17px;color:var(--muted);margin-left:6px;letter-spacing:0}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.chips button{padding:10px 16px;border-radius:999px;background:var(--white);font-size:13.5px;font-variant-numeric:tabular-nums;box-shadow:0 1px 4px rgba(26,26,26,.06)}
+.chips button.on{background:var(--soft);color:#fff;box-shadow:none}
+.numin{width:100%;padding:14px 16px;border-radius:16px;border:1.5px solid transparent;background:var(--white);font-size:15px;outline:none}
+.numin:focus{border-color:#CFCFC8}
+.shhint{font-size:12.5px;color:var(--muted);margin:11px 2px 0;min-height:19px;line-height:1.6}
+.shhint b.ok{color:#6E9A34}
+.shhint b.amber{color:#96682A}
+.ntoggle{display:block;font-size:13px;color:var(--muted);margin:16px 2px 8px}
+.ntoggle.on{color:var(--ink)}
+.note{width:100%;padding:13px 16px;border-radius:16px;background:var(--white);border:0;font-size:14px;resize:none;outline:none;display:none;line-height:1.6}
+.note.show{display:block}
+.shacts{margin-top:18px}
+.pbtn{display:block;width:100%;padding:16px 0;border-radius:999px;background:var(--soft);color:#fff;font-size:15px}
+.pbtn:disabled{opacity:.34}
+.pbtn.amber{background:#A8763A}
+.sbtn{display:block;width:100%;padding:14px 0;border-radius:999px;background:transparent;font-size:13.5px;color:var(--muted);margin-top:4px}
+
+.reason{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.reason button{padding:9px 15px;border-radius:999px;background:#fff;font-size:13px;box-shadow:0 1px 4px rgba(26,26,26,.06)}
+.reason button.on{background:var(--soft);color:#fff;box-shadow:none}
+.noteinput{
+  width:100%;min-height:76px;padding:13px 15px;border-radius:16px;background:#fff;border:1.5px solid transparent;
+  font-size:14px;color:var(--ink);resize:none;outline:none;line-height:1.6;
+}
+.noteinput:focus{border-color:#CFCFC8}
+.noteinput::placeholder{color:#B4B4AE}
+
+.daylist{background:rgba(255,255,255,.95);border-radius:22px;overflow:hidden;border:1.4px dashed rgba(26,26,26,.09)}
+.dayrow{display:flex;align-items:center;gap:12px;padding:15px 16px}
+.dayrow+.dayrow{border-top:1px solid var(--line)}
+.dayrow .lico{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-size:17px;flex:0 0 auto;background:var(--cardbg)}
+.dayrow .dmain{flex:1;min-width:0}
+.dayrow .dname{display:block;font-size:14.5px}
+.dayrow .dsub{display:block;font-size:12px;color:var(--muted);margin-top:3px}
+.dayrow .dacts{display:flex;gap:6px;flex:0 0 auto;flex-wrap:wrap;justify-content:flex-end}
+.dayrow .dacts button{padding:8px 11px;border-radius:999px;background:rgba(26,26,26,.05);font-size:12px}
+.dayrow .dacts button.off{color:var(--muted);opacity:.5}
+
+/* ---------- 二级页 ---------- */
+#pageRoot{position:fixed;inset:0;z-index:60;background:var(--bg);overflow-y:auto;display:none}
+#pageRoot.show{display:block}
+.page-in{max-width:480px;margin:0 auto;padding:46px 18px calc(30px + env(safe-area-inset-bottom))}
+.phead{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.phead button{width:40px;height:40px;border-radius:50%;background:var(--white);font-size:16px;flex:0 0 auto}
+.phead b{font-size:19px}
+.field{margin-bottom:20px}
+.field>label{display:block;font-size:13px;color:var(--muted);margin-bottom:9px}
+.field input[type=text],.field input[type=number]{
+  width:100%;padding:14px 16px;border-radius:16px;border:1.5px solid transparent;background:var(--white);
+  font-size:15px;outline:none;
+}
+.field input:focus{border-color:#CFCFC8}
+.field .hint{font-size:11.5px;color:var(--muted);margin-top:7px;line-height:1.6}
+.typecards{display:flex;gap:10px}
+.typecard{flex:1;padding:15px 14px;border-radius:18px;background:var(--white);text-align:left;font-size:13.5px;line-height:1.45}
+.typecard b{display:block;font-size:14.5px;margin-bottom:4px}
+.typecard.on{background:var(--soft);color:#fff}
+.typecard:disabled{opacity:.5}
+.picker{display:flex;flex-wrap:wrap;gap:8px}
+.picker button{width:44px;height:44px;border-radius:14px;background:var(--white);font-size:20px;display:grid;place-items:center}
+.picker button.on{box-shadow:inset 0 0 0 2px var(--ink)}
+.picker.col button{width:38px;height:38px;background:var(--pc);border-radius:50%}
+.picker.col button.on{box-shadow:inset 0 0 0 2px var(--ink)}
+.pfoot{margin-top:28px}
+.pfoot .danger{margin-top:20px}
+
+/* ---------- 对话框 ---------- */
+.dlg{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-46%) scale(.96);z-index:70;
+  width:min(340px,88vw);background:var(--bg);border-radius:26px;padding:24px 22px;
+  opacity:0;pointer-events:none;transition:opacity .2s ease,transform .2s ease;
+  box-shadow:0 20px 50px rgba(26,26,26,.2);
+}
+.dlg.show{opacity:1;pointer-events:auto;transform:translate(-50%,-50%) scale(1)}
+.dlg h3{margin:0 0 10px;font-size:17px}
+.dlg p{margin:0 0 20px;font-size:13.5px;color:var(--muted);line-height:1.65}
+.dlg .dacts{display:flex;gap:9px}
+.dlg .dacts button{flex:1;padding:13px 0;border-radius:999px;font-size:14px;background:var(--white)}
+.dlg .dacts .danger{background:#E8B4B4;color:#7A2B2B;border:0;margin-top:0}
+
+#toast{
+  position:fixed;left:50%;bottom:calc(var(--tabbar-h) + 34px);transform:translateX(-50%) translateY(10px);
+  background:var(--soft);color:#fff;font-size:13.5px;padding:11px 20px;border-radius:999px;
+  opacity:0;pointer-events:none;transition:all .24s ease;z-index:80;white-space:nowrap;max-width:88vw;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.05)}100%{transform:scale(1)}}
+.pop{animation:pop .42s ease}
+</style>
+</head>
+<body>
+
+<div id="view"></div>
+<nav id="tabbar"><div class="navin">
+  <span class="thumb"></span>
+  <button data-tab="today" class="on">今日</button>
+  <button data-tab="records">记录</button>
+  <button data-tab="mine">我的</button>
+</div></nav>
+
+<div id="sheetRoot"></div>
+<div id="pageRoot"></div>
+<div id="toast"></div>
+
+<script>
+/* ============================================================
+   工具
+   ============================================================ */
+var $ = function (s, r) { return (r || document).querySelector(s); };
+var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+function isoOf(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+function todayISO() { return isoOf(new Date()); }
+function parseISO(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
+function addDays(s, n) { var d = parseISO(s); d.setDate(d.getDate() + n); return isoOf(d); }
+function diffDays(a, b) { return Math.round((parseISO(b) - parseISO(a)) / 86400000); }
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+var WEEK = ['日', '一', '二', '三', '四', '五', '六'];
+function fmtDate(iso) { var d = parseISO(iso); return (d.getMonth() + 1) + '月' + d.getDate() + '日 周' + WEEK[d.getDay()]; }
+function fmtDateShort(iso) { var d = parseISO(iso); return (d.getMonth() + 1) + '月' + d.getDate() + '日'; }
+function fmtMin(n) {
+  if (!n) return '0 分钟';
+  if (n < 60) return n + ' 分钟';
+  var h = Math.floor(n / 60), m = n % 60;
+  return m ? h + ' 小时 ' + m + ' 分' : h + ' 小时';
+}
+function hoursText(min) {
+  if (!min) return '0';
+  var hh = min / 60;
+  if (hh < 10) { var v = Math.round(hh * 10) / 10; return (v % 1 === 0 ? String(v) : v.toFixed(1)); }
+  return String(Math.round(hh));
+}
+/* 所在周的周一 */
+function weekStartOf(iso) {
+  var d = parseISO(iso);
+  var off = (d.getDay() + 6) % 7;
+  return addDays(iso, -off);
+}
+
+/* ============================================================
+   数据
+   ============================================================ */
+var KEY = 'jianchi-v1';
+var QUOTA_MAX = 3;   /* 每周休息日 / 请假各最多 3 天 */
+var PALETTE = {
+  green:  { bg: '#DDEBCB', c2: '#EDF5E1', deep: '#8FB55C', ring: '#BEDD94' },
+  purple: { bg: '#DED8EF', c2: '#EBE8F7', deep: '#9C8FD0', ring: '#BBA8E8' },
+  blue:   { bg: '#CFE0EF', c2: '#E1EDF6', deep: '#7FA8C9', ring: '#93C6EA' },
+  pink:   { bg: '#F3DCE2', c2: '#FAEFF2', deep: '#CE8CA0', ring: '#EDB4C6' },
+  orange: { bg: '#F7E4CE', c2: '#FCF2E4', deep: '#D0A26A', ring: '#EEC79A' },
+  teal:   { bg: '#CFE7E2', c2: '#E4F2EF', deep: '#79B3A8', ring: '#A2D3C9' },
+  yellow: { bg: '#F5EEC9', c2: '#FAF6E1', deep: '#C9B85E', ring: '#E7D992' },
+  gray:   { bg: '#E6E6E2', c2: '#F1F1EE', deep: '#A3A39B', ring: '#D0D0C9' }
+};
+var ICONS = ['📖','💪','🛡️','🏃','🧘','💧','🥗','📝','🎯','🎸','🌙','☀️','🚭','🍎','🧹','💊'];
+var LEAVE_REASONS = ['加班', '身体不适', '外出', '家中有事'];
+
+function defaultState() {
+  var t = todayISO();
+  return {
+    version: 1,
+    habits: [
+      { id: 'en',    name: '英语', icon: '📖', color: 'green',  type: 'check',   goalMinutes: 30, sort: 0, builtin: true, archived: false, createdAt: t, allowRest: false, allowLeave: true },
+      { id: 'fit',   name: '健身', icon: '💪', color: 'purple', type: 'check',   goalMinutes: 40, sort: 1, builtin: true, archived: false, createdAt: t, allowRest: true,  allowLeave: false },
+      { id: 'nofap', name: '戒撸', icon: '🛡️', color: 'blue',   type: 'abstain', goalMinutes: 0,  sort: 2, builtin: true, archived: false, createdAt: t, allowRest: false, allowLeave: false }
+    ],
+    records: {},
+    settings: { lastBackupAt: null, createdAt: t }
+  };
+}
+function load() {
+  try {
+    var raw = localStorage.getItem(KEY);
+    if (!raw) return null;
+    var d = JSON.parse(raw);
+    if (!d || !d.habits || !d.records) return null;
+    if (!d.settings) d.settings = { lastBackupAt: null, createdAt: todayISO() };
+    /* 兼容旧数据：补上 allowRest / allowLeave 字段 */
+    d.habits.forEach(function (h) {
+      if (typeof h.allowRest === 'undefined') h.allowRest = (h.id === 'fit');
+      if (typeof h.allowLeave === 'undefined') h.allowLeave = (h.id === 'en');
+    });
+    return d;
+  } catch (e) { return null; }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch (e) { toast('保存失败，存储空间可能已满'); }
+}
+var S = load() || defaultState();
+
+function activeHabits() { return S.habits.filter(function (h) { return !h.archived; }).sort(function (a, b) { return a.sort - b.sort; }); }
+function habitById(id) { return S.habits.filter(function (h) { return h.id === id; })[0]; }
+function recOf(hid, d) { return (S.records[hid] || {})[d]; }
+function setRec(hid, d, rec) { if (!S.records[hid]) S.records[hid] = {}; S.records[hid][d] = rec; }
+function delRec(hid, d) { if (S.records[hid]) delete S.records[hid][d]; }
+
+/* 记录状态：完成型 status = done | rest | leave（缺省为 done）；戒断型 status = kept | relapse */
+function recStatus(h, r) {
+  if (!r) return null;
+  if (h.type === 'abstain') return r.status === 'relapse' ? 'relapse' : 'kept';
+  return (r.status === 'rest' || r.status === 'leave') ? r.status : 'done';
+}
+function isExcused(r) { return !!r && (r.status === 'rest' || r.status === 'leave'); }
+function isDone(h, d) {
+  var r = recOf(h.id, d);
+  if (!r) return false;
+  if (h.type === 'abstain') return r.status === 'kept';
+  return !isExcused(r);
+}
+
+/* ---------- 派生数据 ---------- */
+function streak(h) {
+  var t = todayISO();
+  if (h.type === 'abstain') {
+    var log = S.records[h.id] || {};
+    if (log[t] && log[t].status === 'relapse') return 0;
+    var last = null;
+    for (var d in log) if (log[d].status === 'relapse' && (!last || d > last)) last = d;
+    var start = last ? addDays(last, 1) : (h.createdAt || t);
+    if (start > t) return 0;
+    return diffDays(start, t) + 1;
+  }
+  /* 完成型：休息日 / 请假不计数也不中断 */
+  var day = t, n = 0, guard = 0;
+  if (!recOf(h.id, day)) day = addDays(day, -1);
+  while (guard++ < 3650) {
+    var r = recOf(h.id, day);
+    if (!r) break;
+    if (!isExcused(r)) n++;
+    day = addDays(day, -1);
+  }
+  return n;
+}
+function bestStreak(h) {
+  var log = S.records[h.id] || {};
+  var dates = Object.keys(log).sort();
+  if (!dates.length) return 0;
+  if (h.type === 'abstain') {
+    var rel = dates.filter(function (d) { return log[d].status === 'relapse'; });
+    var start = h.createdAt || todayISO();
+    var best = 0, prev = start;
+    rel.forEach(function (d) {
+      var len = diffDays(prev, d);
+      if (len > best) best = len;
+      prev = addDays(d, 1);
+    });
+    if (prev <= todayISO()) {
+      var len2 = diffDays(prev, todayISO()) + 1;
+      if (len2 > best) best = len2;
+    }
+    return best;
+  }
+  var t = todayISO();
+  var best2 = 0, run = 0;
+  var d2 = dates[0];
+  var guard = 0;
+  while (d2 <= t && guard++ < 7300) {
+    var r = log[d2];
+    if (r) {
+      if (!isExcused(r)) run++;
+    } else if (d2 !== t) {
+      run = 0;
+    }
+    if (run > best2) best2 = run;
+    d2 = addDays(d2, 1);
+  }
+  return best2;
+}
+function relapseCount(h) {
+  var log = S.records[h.id] || {}, n = 0;
+  for (var d in log) if (log[d].status === 'relapse') n++;
+  return n;
+}
+function totalDays(h) {
+  var log = S.records[h.id] || {}, n = 0;
+  for (var d in log) if (!isExcused(log[d])) n++;
+  return n;
+}
+function totalMinutes(h) {
+  var log = S.records[h.id] || {}, n = 0;
+  for (var d in log) n += (log[d].minutes || 0);
+  return n;
+}
+function lastMinutes(hid) {
+  var log = S.records[hid] || {};
+  var ds = Object.keys(log).filter(function (d) { return typeof log[d].minutes === 'number'; }).sort();
+  return ds.length ? log[ds[ds.length - 1]].minutes : null;
+}
+function monthStats(h, y, m) {
+  var days = new Date(y, m + 1, 0).getDate();
+  var td = parseISO(todayISO());
+  var elapsed = (y === td.getFullYear() && m === td.getMonth()) ? td.getDate() : days;
+  var done = 0, mins = 0, excused = 0;
+  for (var d = 1; d <= days; d++) {
+    var iso = isoOf(new Date(y, m, d));
+    var r = recOf(h.id, iso);
+    if (!r) continue;
+    if (h.type === 'abstain') { if (r.status === 'kept') done++; }
+    else if (isExcused(r)) { excused++; }
+    else { done++; mins += (r.minutes || 0); }
+  }
+  var base = Math.max(1, elapsed - excused);
+  return { done: done, mins: mins, elapsed: elapsed, excused: excused, rate: Math.round(done / base * 100) };
+}
+function weekStats() {
+  var t = todayISO();
+  var ws = weekStartOf(t);
+  var hs = activeHabits(), days = 0;
+  for (var i = 0; i < 7; i++) {
+    var iso = addDays(ws, i);
+    if (iso > t) break;
+    if (hs.some(function (h) { return isDone(h, iso); })) days++;
+  }
+  return { days: days, start: ws };
+}
+/* 本周某习惯已用掉的休息日 / 请假天数 */
+function quotaUsed(hid, kind) {
+  var ws = weekStartOf(todayISO());
+  var log = S.records[hid] || {}, n = 0;
+  for (var i = 0; i < 7; i++) {
+    var r = log[addDays(ws, i)];
+    if (r && r.status === kind) n++;
+  }
+  return n;
+}
+/* 近 7 天（含今天）各天的状态，用于七日条 */
+function last7(h) {
+  var t = todayISO(), out = [];
+  for (var i = 6; i >= 0; i--) {
+    var d = addDays(t, -i);
+    var r = recOf(h.id, d);
+    var kind = 'off';
+    if (r) {
+      var st = recStatus(h, r);
+      kind = (st === 'kept') ? 'on' : st;
+    }
+    out.push({ d: d, kind: kind, today: d === t });
+  }
+  return out;
+}
+/* 本周各天（周一起）的状态，用于统计柱状图 */
+function weekBar() {
+  var t = todayISO(), ws = weekStartOf(t), out = [];
+  var hs = activeHabits();
+  for (var i = 0; i < 7; i++) {
+    var d = addDays(ws, i);
+    var kind = 'off';
+    if (d <= t) {
+      var kinds = hs.map(function (h) {
+        var r = recOf(h.id, d);
+        return r ? recStatus(h, r) : null;
+      }).filter(Boolean);
+      if (kinds.indexOf('done') >= 0 || kinds.indexOf('kept') >= 0) kind = 'on';
+      else if (kinds.indexOf('leave') >= 0) kind = 'leave';
+      else if (kinds.indexOf('rest') >= 0) kind = 'rest';
+      else if (kinds.indexOf('relapse') >= 0) kind = 'relapse';
+    }
+    out.push({ d: d, kind: kind, future: d > t });
+  }
+  return out;
+}
+
+/* ============================================================
+   UI 基础件
+   ============================================================ */
+var toastTimer;
+function toast(msg) {
+  var el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { el.classList.remove('show'); }, 2000);
+}
+function confirmDlg(title, body, okText, onOk, danger) {
+  var root = $('#sheetRoot');
+  var wrap = document.createElement('div');
+  wrap.innerHTML =
+    '<div class="mask show" data-close="1"></div>' +
+    '<div class="dlg show"><h3>' + esc(title) + '</h3><p>' + body + '</p>' +
+    '<div class="dacts"><button data-close="1">取消</button>' +
+    '<button class="' + (danger ? 'danger' : 'pbtn') + '" data-ok="1">' + esc(okText) + '</button></div></div>';
+  root.appendChild(wrap);
+  wrap.addEventListener('click', function (e) {
+    if (e.target.closest('[data-close]')) close();
+    if (e.target.closest('[data-ok]')) { close(); onOk(); }
+  });
+  function close() {
+    var m = wrap.querySelector('.mask'), d = wrap.querySelector('.dlg');
+    m.classList.remove('show'); d.classList.remove('show');
+    setTimeout(function () { wrap.remove(); }, 220);
+  }
+}
+function quotaDots(used, kind) {
+  var h = '';
+  for (var i = 0; i < QUOTA_MAX; i++) {
+    h += '<i class="' + (i < used ? (kind === 'leave' ? 'usedL' : 'used') : '') + '"></i>';
+  }
+  return '<span class="dots">' + h + '</span>';
+}
+
+/* ============================================================
+   今日页
+   ============================================================ */
+function cardStyle(h) {
+  var p = PALETTE[h.color] || PALETTE.green;
+  return '--c1:' + p.bg + ';--c2:' + p.c2 + ';--deep:' + p.deep;
+}
+function habitCard(h, d, idx) {
+  var p = PALETTE[h.color] || PALETTE.green;
+  var r = recOf(h.id, d);
+  var st = streak(h);
+  var status = recStatus(h, r);
+  var isToday = (d === todayISO());
+  var cls = 'card' + (idx % 2 === 1 ? ' rr' : '') + (isExcused(r) ? ' excused' : '');
+  var style = isExcused(r) ? '' : ' style="' + cardStyle(h) + '"';
+  var goal = h.goalMinutes || 0;
+  var out = '<div class="' + cls + '"' + style + '>' +
+    '<div class="wm">' + h.icon + '</div>';
+
+  /* ---- 上排 ---- */
+  var right = '', meta = '', extra = '', wkCls = '';
+  if (h.type === 'abstain') {
+    right = '<div class="bignum">' + st + '<em> 天</em></div>';
+    meta = '最长 ' + bestStreak(h) + ' 天 · 累计破戒 ' + relapseCount(h) + ' 次';
+    wkCls = 'b';
+  } else if (status === 'rest') {
+    right = '<div class="bignum">' + st + '<em> 天</em></div>';
+    meta = '连续 <span class="hl p">' + st + ' 天</span> · 今天休息日';
+  } else if (status === 'leave') {
+    right = '<div class="bignum">' + st + '<em> 天</em></div>';
+    meta = '连续 <span class="hl">' + st + ' 天</span> · 今天请假';
+  } else if (status === 'done') {
+    var m = r.minutes || 0;
+    right = '<div class="bignum">' + m + '<em> 分</em></div>';
+    meta = '连续 <span class="hl' + (h.color === 'purple' ? ' p' : (h.color === 'blue' ? ' b' : '')) + '">' + st + ' 天</span>' +
+      (goal > 0 ? ' · 目标 ' + goal + ' 分钟' : '');
+  } else {
+    right = '<div class="bignum">0<em>' + (goal > 0 ? ' / ' + goal : ' 分') + '</em></div>';
+    meta = '连续 <span class="hl' + (h.color === 'purple' ? ' p' : (h.color === 'blue' ? ' b' : '')) + '">' + st + ' 天</span>' +
+      (goal > 0 ? ' · 目标 ' + goal + ' 分钟' : '');
+  }
+  out += '<div class="ctop"><div class="ic">' + h.icon + '</div>' +
+    '<div style="flex:1;min-width:0"><div class="cname">' + esc(h.name) + '</div>' +
+    '<div class="cmeta">' + meta + '</div></div>' + right + '</div>';
+
+  /* ---- 进度 / 状态 ---- */
+  if (h.type === 'abstain') {
+    /* 无进度条 */
+  } else if (status === 'rest') {
+    out += '<div class="excusechip">☾ 休息日 · 连续不中断</div>';
+  } else if (status === 'leave') {
+    out += '<div class="excusechip">✎ 请假' + (r.leaveReason ? ' · ' + esc(r.leaveReason) : '') + '</div>';
+    if (r.note) out += '<div class="noteq">「' + esc(r.note) + '」</div>';
+  } else {
+    var m2 = r ? (r.minutes || 0) : 0;
+    var pct = goal > 0 ? Math.min(100, Math.round(m2 / goal * 100)) : (r ? 100 : 0);
+    out += '<div class="pbar"><i style="width:' + pct + '%"></i></div>' +
+      '<div class="plabel"><span>' + (goal > 0 ? m2 + ' / ' + goal + ' 分钟' : (r ? m2 + ' 分钟' : '今天还没打卡')) + '</span>' +
+      '<span>' + (r ? (goal > 0 && m2 >= goal ? '已达标 · ' + hhmm(r.at) : hhmm(r.at)) : (goal > 0 ? '还差 ' + goal + ' 分钟' : '')) + '</span></div>';
+  }
+
+  /* ---- 七日条 ---- */
+  var d7 = last7(h);
+  out += '<div class="wk">' + d7.map(function (x) {
+    return '<i class="' + x.kind + (x.today ? ' today' : '') + '"></i>';
+  }).join('') + '<em>近 7 天</em></div>';
+
+  /* ---- 按钮 ---- */
+  if (h.type === 'abstain') {
+    if (!r) {
+      out += '<div class="btnrow"><button class="wide" data-act="keep" data-hid="' + h.id + '" data-date="' + d + '">坚持住了</button>' +
+        '<button data-act="reset" data-hid="' + h.id + '" data-date="' + d + '">重新开始</button></div>';
+    } else if (status === 'kept') {
+      out += '<div class="btnrow pad"><button data-act="note" data-hid="' + h.id + '" data-date="' + d + '">改备注</button>' +
+        '<button data-act="undo" data-hid="' + h.id + '" data-date="' + d + '">撤销</button></div>' +
+        '<div class="stamp blue">坚持<br>' + st + '天</div>';
+    } else {
+      out += '<div class="btnrow"><button data-act="undo" data-hid="' + h.id + '" data-date="' + d + '">撤销</button></div>' +
+        '<div class="stamp gray">重新<br>开始</div>';
+    }
+  } else if (status === 'rest') {
+    var ru = quotaUsed(h.id, 'rest');
+    out += '<div class="btnrow"><button class="wide" data-act="checkin" data-hid="' + h.id + '" data-date="' + d + '">今天还是练了</button>' +
+      '<button data-act="cancelExcuse" data-hid="' + h.id + '" data-date="' + d + '">取消休息</button></div>';
+    out += '<div class="quotahint">本周休息日 ' + quotaDots(ru, 'rest') + ' <b>' + ru + ' / ' + QUOTA_MAX + '</b> 天' +
+      (ru >= QUOTA_MAX ? ' · 已用满，下周一重置' : '') + '</div>';
+    out += '<div class="stamp gray">休息<br>不中断</div>';
+  } else if (status === 'leave') {
+    var lu = quotaUsed(h.id, 'leave');
+    out += '<div class="btnrow pad"><button data-act="editLeave" data-hid="' + h.id + '" data-date="' + d + '">改事由</button>' +
+      '<button data-act="cancelExcuse" data-hid="' + h.id + '" data-date="' + d + '">取消请假</button></div>';
+    out += '<div class="quotahint">本周请假 ' + quotaDots(lu, 'leave') + ' <b>' + lu + ' / ' + QUOTA_MAX + '</b> 天' +
+      (lu >= QUOTA_MAX ? ' · 已用满，下周一重置' : '') + '</div>';
+    out += '<div class="stamp amber">请假<br>不计入</div>';
+  } else if (status === 'done') {
+    var metGoal = goal > 0 && (r.minutes || 0) >= goal;
+    var btns3 = '<button data-act="edit" data-hid="' + h.id + '" data-date="' + d + '">改时长</button>';
+    /* 已打卡后仍可改主意：转为休息日 / 请假 */
+    if (h.allowRest && quotaUsed(h.id, 'rest') < QUOTA_MAX) {
+      btns3 += '<button data-act="rest" data-hid="' + h.id + '" data-date="' + d + '">改休息日</button>';
+    }
+    if (h.allowLeave && quotaUsed(h.id, 'leave') < QUOTA_MAX) {
+      btns3 += '<button data-act="leave" data-hid="' + h.id + '" data-date="' + d + '">改请假</button>';
+    }
+    btns3 += '<button data-act="undo" data-hid="' + h.id + '" data-date="' + d + '">撤销</button>';
+    out += '<div class="btnrow' + (metGoal ? ' pad' : '') + '">' + btns3 + '</div>';
+    if (metGoal) out += '<div class="stamp">已<br>达标</div>';
+  } else {
+    var ru2 = quotaUsed(h.id, 'rest'), lu2 = quotaUsed(h.id, 'leave');
+    var btns = '<button class="wide" data-act="checkin" data-hid="' + h.id + '" data-date="' + d + '">打卡</button>';
+    if (h.allowLeave) {
+      btns += '<button' + (lu2 >= QUOTA_MAX ? ' class="dis"' : ' data-act="leave" data-hid="' + h.id + '" data-date="' + d + '"') +
+        '>请假</button>';
+    }
+    if (h.allowRest) {
+      btns += '<button' + (ru2 >= QUOTA_MAX ? ' class="dis"' : ' data-act="rest" data-hid="' + h.id + '" data-date="' + d + '"') +
+        '>休息日</button>';
+    }
+    out += '<div class="btnrow">' + btns + '</div>';
+    if (h.allowRest || h.allowLeave) {
+      var qs = [];
+      if (h.allowRest) qs.push('休息日 ' + quotaDots(ru2, 'rest') + ' <b>' + ru2 + ' / ' + QUOTA_MAX + '</b>');
+      if (h.allowLeave) qs.push('请假 ' + quotaDots(lu2, 'leave') + ' <b>' + lu2 + ' / ' + QUOTA_MAX + '</b>');
+      out += '<div class="quotahint">本周 ' + qs.join('　') + '</div>';
+    }
+  }
+  return out + '</div>';
+}
+function hhmm(isoStr) {
+  if (!isoStr) return '';
+  try {
+    var d = new Date(isoStr);
+    return pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  } catch (e) { return ''; }
+}
+function renderToday() {
+  var t = todayISO();
+  var hs = activeHabits();
+  var done = hs.filter(function (h) { return isDone(h, t); }).length;
+  var mins = hs.filter(function (h) { return h.type === 'check'; })
+               .reduce(function (a, h) { return a + ((recOf(h.id, t) || {}).minutes || 0); }, 0);
+  var all = hs.length > 0 && done === hs.length;
+  var w = weekStats();
+  var now = new Date();
+
+  var h = '';
+  h += '<div class="sb"><span>' + now.getHours() + ':' + pad2(now.getMinutes()) + '</span>' +
+       '<span class="sb-r">5G<i class="sb-bat"></i></span></div>';
+  h += '<div class="top"><div class="ava">坚</div><div class="topr">' +
+       '<button class="icb plus" data-act="newHabit">+</button>' +
+       '<button class="icb bell" data-act="noop">🔔</button></div></div>';
+  h += '<h1 class="h1">今日</h1><p class="date">' + fmtDate(t) + '</p>';
+  h += '<div class="sum"><span class="sum-n">' + done + '<i>/' + hs.length + '</i></span>' +
+       '<span class="sum-l' + (all ? ' done' : '') + '">' +
+       (all ? '今日全部完成 🎉' : '今日完成 · ' + fmtMin(mins)) + '</span></div>';
+
+  if (!hs.length) {
+    h += '<div class="empty">还没有打卡项<button class="pbtn" data-act="newHabit">添加习惯</button></div>';
+  } else {
+    hs.forEach(function (x, i) { h += habitCard(x, t, i); });
+  }
+
+  /* 本周统计 */
+  var wb = weekBar();
+  h += '<div class="sect">本周</div><div class="stats">' +
+    '<div class="stat"><div class="stat-l">打卡天数</div>' +
+    '<div class="bars">' + wb.map(function (x) {
+      return '<i class="' + (x.future ? 'off' : x.kind) + '" style="height:' + (x.future ? 30 : 100) + '%"></i>';
+    }).join('') + '</div>' +
+    '<div class="stat-v">' + w.days + '<span>天</span></div></div>' +
+    '<div class="stat tint"><div class="stat-l">累计时长</div>' +
+    '<div class="stat-v">' + hoursText(hs.reduce(function (a, x) { return a + totalMinutes(x); }, 0)) + '<span>小时</span></div></div>' +
+    '</div>';
+  h += '<div class="legend2">' +
+    '<span><i style="background:#C6DFA4"></i>已打卡</span>' +
+    '<span><i style="background:repeating-linear-gradient(48deg,#8E8E86 0 3.5px,#C4C4BC 3.5px 7px)"></i>休息日</span>' +
+    '<span><i style="background:repeating-linear-gradient(48deg,#C79A55 0 3.5px,#EBD9B8 3.5px 7px)"></i>请假</span>' +
+    '</div>';
+  return h;
+}
+
+/* ============================================================
+   记录页
+   ============================================================ */
+var recView = { hid: 'all', y: 0, m: 0, sel: null };
+function cellInfo(hid, iso) {
+  var hs = activeHabits();
+  if (hid === 'all') {
+    var slots = [], back = false;
+    hs.forEach(function (h) {
+      var r = recOf(h.id, iso);
+      if (!r) { slots.push(null); return; }
+      if (r.backfilled) back = true;
+      var st = recStatus(h, r);
+      if (st === 'rest') slots.push({ c: 'rest' });
+      else if (st === 'leave') slots.push({ c: 'leave' });
+      else if (st === 'relapse') slots.push({ c: 'relapse' });
+      else slots.push({ c: (PALETTE[h.color] || PALETTE.green).ring });
+    });
+    return { slots: slots, total: hs.length, back: back, striped: null };
+  }
+  var h = habitById(hid);
+  if (!h) return { slots: [], total: 0, back: false, striped: null };
+  var r = recOf(h.id, iso);
+  if (!r) return { slots: [], total: 0, back: false, striped: null };
+  var back2 = !!r.backfilled;
+  var st2 = recStatus(h, r);
+  if (st2 === 'rest') return { slots: [], total: 0, back: back2, striped: 'rest' };
+  if (st2 === 'leave') return { slots: [], total: 0, back: back2, striped: 'leave' };
+  if (st2 === 'relapse') return { slots: [], total: 0, back: back2, striped: 'relapse' };
+  if (h.type === 'abstain') return { slots: [], total: 0, back: back2, striped: null };
+  var goal = h.goalMinutes || 0, m = r.minutes || 0;
+  var tone = 'ring';
+  if (goal > 0) {
+    var ratio = m / goal;
+    tone = ratio >= 1 ? 'ring' : (ratio >= .5 ? 'ring' : 'ring');
+  }
+  return { slots: [], total: 0, back: back2, striped: null };
+}
+function dayDetail(iso) {
+  var t = todayISO();
+  var h = habitById(recView.hid);
+  if (!h) return '';
+  var canBack = iso < t && diffDays(iso, t) <= 7;
+  var r = recOf(h.id, iso);
+  var status = recStatus(h, r);
+  var sub, act = '';
+  if (h.type === 'abstain') {
+    sub = r ? (status === 'kept' ? '坚持住了' : '重新开始了') : '未记录';
+  } else if (status === 'rest') {
+    sub = '休息日 · 连续不中断';
+  } else if (status === 'leave') {
+    sub = '请假' + (r.leaveReason ? ' · ' + r.leaveReason : '');
+  } else {
+    sub = r ? (r.minutes != null ? r.minutes + ' 分钟' : '已打卡（未记时长）') : '未记录';
+  }
+  if (r && r.backfilled) sub += ' · 补打';
+  if (r) {
+    act = '<button data-act="dayEdit" data-hid="' + h.id + '" data-date="' + iso + '">改</button>' +
+          '<button data-act="dayDel" data-hid="' + h.id + '" data-date="' + iso + '">删</button>';
+  } else if (canBack) {
+    act = '<button data-act="dayBack" data-hid="' + h.id + '" data-date="' + iso + '">补打</button>';
+    if (h.allowRest) act += '<button data-act="dayRest" data-hid="' + h.id + '" data-date="' + iso + '">休息</button>';
+    if (h.allowLeave) act += '<button data-act="dayLeave" data-hid="' + h.id + '" data-date="' + iso + '">请假</button>';
+  } else {
+    act = '<button class="off" disabled>—</button>';
+  }
+  var note = (r && r.note) ? '<div class="noteq" style="background:rgba(255,255,255,.6)">「' + esc(r.note) + '」</div>' : '';
+  return '<div class="dcard"><div class="dchead"><span class="dct">' + h.icon + ' ' + esc(h.name) + '</span>' +
+    '<span class="dcn">' + (iso === t ? '今天' : fmtDateShort(iso)) + ' · ' +
+    (iso === t ? '今日记录' : (canBack ? '可补打' : '超过 7 天')) + '</span></div>' +
+    '<div class="drow" style="--hicon:' + (PALETTE[h.color] || PALETTE.green).bg + '">' +
+    '<span class="dico">' + h.icon + '</span>' +
+    '<span class="dmain"><span class="dnm">' + esc(h.name) + '</span><span class="dst">' + sub + '</span></span>' +
+    '<span class="dacts">' + act + '</span></div>' + note + '</div>';
+}
+function renderRecords() {
+  var t = todayISO(), td = parseISO(t);
+  if (!recView.y) { recView.y = td.getFullYear(); recView.m = td.getMonth(); }
+  if (!recView.sel) recView.sel = t;
+  var hs = activeHabits();
+  var y = recView.y, m = recView.m;
+  var isCurMonth = (y === td.getFullYear() && m === td.getMonth());
+  var sel = recView.sel;
+  if (sel && (parseISO(sel).getFullYear() !== y || parseISO(sel).getMonth() !== m)) sel = null;
+
+  var h = '<div class="rhead"><div class="ava">坚</div>' +
+    '<div class="rtitle">打卡记录</div>' +
+    '<button class="icb bell" data-act="noop">🔔</button></div>';
+
+  h += '<div class="fpills">' +
+    '<button class="fpill' + (recView.hid === 'all' ? ' on' : '') + '" data-act="pick" data-hid="all">全部</button>' +
+    hs.map(function (x) {
+      return '<button class="fpill' + (recView.hid === x.id ? ' on' : '') + '" data-act="pick" data-hid="' + x.id + '">' + esc(x.name) + '</button>';
+    }).join('') + '</div>';
+
+  h += '<div class="calrow">' +
+    '<div class="mpill">' +
+    '<button class="mnav" data-act="prev">‹</button>' +
+    '<span class="mico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 9.5h17M8 3.5V6M16 3.5V6"/></svg></span>' +
+    '<span class="msp">' + y + '.' + pad2(m + 1) + '</span>' +
+    '<button class="mnav" data-act="next"' + (isCurMonth ? ' disabled' : '') + '>›</button>' +
+    '</div>' +
+    '<button class="todaybtn" data-act="toToday">' +
+    '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>' +
+    '</button></div>';
+
+  /* 日历 */
+  var first = new Date(y, m, 1);
+  var off = (first.getDay() + 6) % 7;
+  var days = new Date(y, m + 1, 0).getDate();
+  var cells = '';
+  for (var i = 0; i < off; i++) cells += '<span class="ccell blank"></span>';
+  for (var d = 1; d <= days; d++) {
+    var iso = isoOf(new Date(y, m, d));
+    var future = iso > t;
+    var ci = cellInfo(recView.hid, iso);
+    var cls = 'ccell' + (future ? ' future' : '') + (iso === t ? ' today' : '') + (iso === sel ? ' sel' : '');
+    if (ci.striped) cls += ' cellstriped ' + ci.striped;
+    var rings = '';
+    if (ci.slots && ci.slots.some(function (x) { return x; })) {
+      var nTotal = Math.max(1, ci.total || ci.slots.length);
+      var inset = 10, holeMin = 26;
+      var step = Math.min(8, (100 - inset * 2 - holeMin) / nTotal);
+      var inner = '';
+      ci.slots.forEach(function (x, k) {
+        if (!x) return;
+        var isPat = (x.c === 'rest' || x.c === 'leave' || x.c === 'relapse');
+        var rc = x.c === 'rest' ? '#8E8E86' : (x.c === 'leave' ? '#C79A55' : (x.c === 'relapse' ? '#E0A8A8' : x.c));
+        var pat = '';
+        if (x.c === 'rest') pat = 'repeating-linear-gradient(48deg,#8E8E86 0 2.5px,#C4C4BC 2.5px 5px)';
+        else if (x.c === 'leave') pat = 'repeating-linear-gradient(48deg,#C79A55 0 2.5px,#EBD9B8 2.5px 5px)';
+        else pat = rc;
+        inner += '<i style="--pad:' + inset + '%;--step:' + step + '%;--ri:' + k + ';background:' + pat + '"></i>';
+        inner += '<b class="ccore" style="--pad:' + inset + '%;--step:' + step + '%;--ci:' + (k + 1) + '"></b>';
+      });
+      rings = '<span class="crings">' + inner + '</span>';
+    }
+    cells += '<button class="' + cls + '" data-act="day" data-date="' + iso + '"' +
+      (future ? ' disabled' : '') + '>' + rings + '<span class="cn">' + d + '</span>' +
+      (ci.back ? '<i class="bk"></i>' : '') + '</button>';
+  }
+  h += '<div class="calwrap"><div class="calwk">' + ['一','二','三','四','五','六','日'].map(function (w) { return '<span>' + w + '</span>'; }).join('') +
+       '</div><div class="cgrid">' + cells + '</div>';
+
+  if (recView.hid === 'all') {
+    var pending = [];
+    for (var pi = 7; pi >= 1; pi--) {
+      var pd = addDays(t, -pi);
+      if (parseISO(pd).getMonth() !== m || parseISO(pd).getFullYear() !== y) continue;
+      if (hs.some(function (x) { return !recOf(x.id, pd); })) pending.push(pd);
+    }
+    if (parseISO(t).getMonth() !== m || parseISO(t).getFullYear() !== y) pending = [];
+    h += '<div class="calhint">完成一项，日期里就多一道色带，从外到内依次是 ' +
+      hs.map(function (x) { return esc(x.name); }).join(' / ') + '<br>灰斜纹＝休息日 · 琥珀斜纹＝请假</div>';
+    if (pending.length) {
+      h += '<div class="calmore"><button class="linkbtn" data-act="batchBack">最近 7 天有 ' +
+        pending.length + ' 天没打满 · 一键补齐</button></div>';
+    }
+  } else {
+    var hh = habitById(recView.hid);
+    var lg = (hh && hh.type === 'abstain')
+      ? [['#EDEDE8', '无记录'], ['#93C6EA', '坚持'], ['#E0A8A8', '破戒']]
+      : [['#EDEDE8', '无记录'], ['#BEDD94', '已打卡'], ['repeating-linear-gradient(48deg,#8E8E86 0 3px,#C4C4BC 3px 6px)', '休息日'], ['repeating-linear-gradient(48deg,#C79A55 0 3px,#EBD9B8 3px 6px)', '请假']];
+    h += '<div class="legend2">' + lg.map(function (x) {
+      return '<span><i style="background:' + x[0] + '"></i>' + x[1] + '</span>';
+    }).join('') + '</div>';
+  }
+  h += '</div>';
+
+  if (recView.hid !== 'all' && sel) h += dayDetail(sel);
+
+  /* 统计 */
+  if (recView.hid === 'all') {
+    var allDays = {}, allMin = 0, allExcused = 0;
+    hs.forEach(function (x) {
+      Object.keys(S.records[x.id] || {}).forEach(function (d) {
+        var r = S.records[x.id][d];
+        if (isExcused(r)) allExcused++; else allDays[d] = 1;
+      });
+      allMin += totalMinutes(x);
+    });
+    h += '<div class="statcard"><div class="srow">' +
+      '<div><b>' + Object.keys(allDays).length + '</b><span>累计打卡天数</span></div>' +
+      '<div><b>' + hoursText(allMin) + '<em> 小时</em></b><span>累计时长</span></div>' +
+      '</div><div class="srow2"><span>' + hs.map(function (x) {
+        return esc(x.name) + ' <b>' + streak(x) + ' 天</b>';
+      }).join(' · ') + '</span></div></div>';
+  } else {
+    var hb = habitById(recView.hid);
+    var ms = monthStats(hb, y, m);
+    h += '<div class="statcard"><div class="srow">' +
+      '<div><b>' + streak(hb) + '<em> 天</em></b><span>当前连续</span></div>' +
+      '<div><b>' + bestStreak(hb) + '<em> 天</em></b><span>最长连续</span></div>' +
+      '<div><b>' + totalDays(hb) + '<em> 天</em></b><span>累计' + (hb.type === 'abstain' ? '坚持' : '打卡') + '</span></div>' +
+      '</div><div class="srow2">' +
+      (hb.type === 'abstain'
+        ? '<span>累计破戒 <b>' + relapseCount(hb) + '</b> 次</span><span>本月坚持率 <b>' + ms.rate + '%</b></span>'
+        : '<span>累计时长 <b>' + fmtMin(totalMinutes(hb)) + '</b></span>' +
+          (ms.excused ? '<span>本月休息/请假 <b>' + ms.excused + '</b> 天</span>' : '') +
+          '<span>本月完成率 <b>' + ms.rate + '%</b></span>') +
+      '</div></div>';
+  }
+
+  if (recView.hid === 'all') {
+    var md = 0, mm = 0, mexc = 0;
+    for (var dd = 1; dd <= days; dd++) {
+      var is2 = isoOf(new Date(y, m, dd));
+      var anyDone = false;
+      hs.forEach(function (x) {
+        var r = recOf(x.id, is2);
+        if (!r) return;
+        if (isExcused(r)) mexc++;
+        else { anyDone = true; mm += (r.minutes || 0); }
+      });
+      if (anyDone) md++;
+    }
+    var elapsed = isCurMonth ? td.getDate() : days;
+    var base = Math.max(1, elapsed - mexc);
+    h += '<div class="msum">本月打卡 <b>' + md + '</b> 天 · 共 <b>' + fmtMin(mm) + '</b> · 完成率 <b>' +
+         Math.round(md / base * 100) + '%</b>' + (mexc ? ' · 休息/请假 ' + mexc + ' 天' : '') + '</div>';
+  } else {
+    var hb2 = habitById(recView.hid);
+    var ms2 = monthStats(hb2, y, m);
+    h += '<div class="msum">' + (hb2.type === 'abstain'
+      ? '本月坚持 <b>' + ms2.done + '</b> 天 · 坚持率 <b>' + ms2.rate + '%</b>'
+      : '本月打卡 <b>' + ms2.done + '</b> 天 · 共 <b>' + fmtMin(ms2.mins) + '</b> · 完成率 <b>' + ms2.rate + '%</b>' +
+        (ms2.excused ? ' · 休息/请假 <b>' + ms2.excused + '</b> 天' : '')) + '</div>';
+  }
+  return h;
+}
+
+/* ============================================================
+   我的页
+   ============================================================ */
+function backupText() {
+  var lb = S.settings.lastBackupAt;
+  if (!lb) {
+    var days = totalRecordDays();
+    return days >= 7 ? '<span class="warn">从未备份，建议现在导出</span>' : '尚未备份';
+  }
+  var d = new Date(lb);
+  var n = Math.floor((Date.now() - d.getTime()) / 86400000);
+  var txt = (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  if (n > 0) txt += '（' + n + ' 天前）'; else txt += '（今天）';
+  return n > 30 ? '<span class="warn">' + txt + ' ⚠️</span>' : txt;
+}
+function totalRecordDays() {
+  var set = {};
+  Object.keys(S.records).forEach(function (hid) {
+    Object.keys(S.records[hid]).forEach(function (d) { set[d] = 1; });
+  });
+  return Object.keys(set).length;
+}
+function renderMine() {
+  var hs = activeHabits();
+  var h = '<h1 class="h1" style="margin-bottom:16px">我的</h1>';
+  h += '<div class="sect">习惯管理</div><div class="list">';
+  hs.forEach(function (x, i) {
+    var p = PALETTE[x.color] || PALETTE.green;
+    var extras = [];
+    if (x.allowRest) extras.push('可休息日');
+    if (x.allowLeave) extras.push('可请假');
+    h += '<div class="lrow" data-act="editHabit" data-hid="' + x.id + '" style="cursor:pointer">' +
+      '<span class="lico" style="--cardbg:' + p.bg + '">' + x.icon + '</span>' +
+      '<span class="lmain"><span class="lname">' + esc(x.name) + '</span>' +
+      '<span class="lsub">' + (x.type === 'check' ? '完成型 · 目标 ' + (x.goalMinutes || 0) + ' 分钟' : '戒断型 · 无目标') +
+      (extras.length ? ' · ' + extras.join('/') : '') + '</span></span>' +
+      '<span class="lup">' +
+      '<button data-act="up" data-hid="' + x.id + '"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+      '<button data-act="down" data-hid="' + x.id + '"' + (i === hs.length - 1 ? ' disabled' : '') + '>↓</button>' +
+      '</span></div>';
+  });
+  h += '</div><button class="addbtn" data-act="newHabit">+ 添加习惯</button>';
+  if (hs.length > 5) h += '<div class="foot" style="margin-top:10px">习惯太多会降低坚持率，建议聚焦 3–5 个</div>';
+
+  h += '<div class="sect">数据</div><div class="list">' +
+    '<button class="lrow" data-act="export"><span class="lmain"><span class="lname">导出数据</span>' +
+    '<span class="lsub">备份为 JSON 文件</span></span><span class="larr">›</span></button>' +
+    '<button class="lrow" data-act="import"><span class="lmain"><span class="lname">导入数据</span>' +
+    '<span class="lsub">从备份文件恢复</span></span><span class="larr">›</span></button>' +
+    '<div class="lrow"><span class="lmain"><span class="lname">上次备份</span>' +
+    '<span class="lsub">' + backupText() + '</span></span></div>' +
+    '</div>';
+
+  h += '<div class="sect">关于</div><div class="list">' +
+    '<div class="lrow"><span class="lmain"><span class="lname">版本</span>' +
+    '<span class="lsub">v1.1 · 数据仅保存在本机浏览器</span></span></div></div>';
+  h += '<button class="danger" data-act="clear">清空所有数据</button>';
+  h += '<div class="foot">换设备前请先「导出数据」，在新设备用「导入数据」恢复。</div>';
+  return h;
+}
+
+/* ============================================================
+   打卡弹层
+   ============================================================ */
+var sheet = { habit: null, date: null, mode: 'new', minutes: null, note: '', noteOpen: false };
+function openCheckin(hid, date, mode) {
+  var h = habitById(hid);
+  var r = recOf(hid, date);
+  sheet.habit = h; sheet.date = date; sheet.mode = mode || 'new';
+  sheet.noteOpen = false;
+  if (mode === 'edit' && r) {
+    sheet.minutes = (typeof r.minutes === 'number') ? r.minutes : null;
+    sheet.note = r.note || '';
+    sheet.noteOpen = !!sheet.note;
+  } else {
+    sheet.note = '';
+    var last = lastMinutes(hid);
+    sheet.minutes = (last != null) ? last : (h.goalMinutes > 0 ? h.goalMinutes : null);
+  }
+  drawCheckin();
+}
+function drawCheckin() {
+  var h = sheet.habit, goal = h.goalMinutes || 0;
+  var last = lastMinutes(h.id);
+  var vals = [15, 30, 45, 60];
+  if (last != null && vals.indexOf(last) < 0) vals.push(last);
+  var isEdit = sheet.mode === 'edit', isBack = sheet.mode === 'backfill';
+
+  var title = isBack ? '补打 ' + fmtDateShort(sheet.date) : (isEdit ? '改时长 · ' + h.name : h.name + '打卡');
+  var sub = isBack ? '这一天的记录会标记为「补打」' : (isEdit ? '修改后立即生效' : '选一个时长，或直接打卡');
+
+  var html = '<div class="mask" data-close="1"></div><div class="sheet show">' +
+    '<div class="grip"></div>' +
+    '<div class="shtitle">' + esc(title) + '</div><div class="shsub">' + sub + '</div>' +
+    '<div class="bignum2" id="shNum">' + ((sheet.minutes == null) ? 0 : sheet.minutes) + '<span>分钟</span></div>' +
+    '<div class="chips" id="shChips">' + vals.map(function (v) {
+      return '<button data-min="' + v + '"' + (sheet.minutes === v ? ' class="on"' : '') + '>' +
+        (v === last && [15,30,45,60].indexOf(v) < 0 ? '上次 ' + v : v) + '</button>';
+    }).join('') + '</div>' +
+    '<input class="numin" id="shInput" type="text" inputmode="numeric" placeholder="或手动输入分钟数" value="' +
+      ((sheet.minutes == null) ? '' : sheet.minutes) + '">' +
+    '<div class="shhint" id="shHint"></div>' +
+    '<button class="ntoggle' + (sheet.noteOpen ? ' on' : '') + '" data-act="ntoggle">' +
+      (sheet.noteOpen ? '收起备注' : '⌄ 加一句备注（可选）') + '</button>' +
+    '<textarea class="note' + (sheet.noteOpen ? ' show' : '') + '" id="shNote" maxlength="50" rows="2" placeholder="今天的情况…">' +
+      esc(sheet.note) + '</textarea>' +
+    '<div class="shacts">' +
+    '<button class="pbtn" id="shPrimary" data-act="save">' +
+      (isEdit ? '保存' : (isBack ? '确认补打' : '完成打卡')) + '</button>' +
+    (!isEdit ? '<button class="sbtn" data-act="nodur">不记时长，直接打卡</button>' : '') +
+    '</div></div>';
+
+  var root = $('#sheetRoot');
+  root.innerHTML = html;
+  bindCheckin();
+  updateCheckin();
+}
+function updateCheckin() {
+  var h = sheet.habit, goal = h.goalMinutes || 0, m = sheet.minutes;
+  var hint = $('#shHint'), num = $('#shNum'), pri = $('#shPrimary');
+  if (!hint) return;
+  if (goal > 0) {
+    if (m == null || m <= 0) hint.innerHTML = '目标 ' + goal + ' 分钟';
+    else if (m >= goal) hint.innerHTML = '<b class="ok">✓ 已达标</b>';
+    else hint.textContent = '还差 ' + (goal - m) + ' 分钟达标';
+  } else hint.textContent = '';
+  num.innerHTML = ((m == null) ? 0 : m) + '<span>分钟</span>';
+  pri.disabled = !(m > 0);
+  $$('#shChips button').forEach(function (b) { b.classList.toggle('on', +b.dataset.min === m); });
+}
+function bindCheckin() {
+  var root = $('#sheetRoot');
+  var input = $('#shInput');
+  root.addEventListener('click', function (e) {
+    if (e.target.closest('[data-close]')) { closeSheet(); return; }
+    var chip = e.target.closest('[data-min]');
+    if (chip) { sheet.minutes = +chip.dataset.min; input.value = sheet.minutes; updateCheckin(); return; }
+    var tgl = e.target.closest('[data-act="ntoggle"]');
+    if (tgl) {
+      sheet.noteOpen = !sheet.noteOpen;
+      tgl.classList.toggle('on', sheet.noteOpen);
+      tgl.textContent = sheet.noteOpen ? '收起备注' : '⌄ 加一句备注（可选）';
+      $('#shNote').classList.toggle('show', sheet.noteOpen);
+      if (sheet.noteOpen) $('#shNote').focus();
+      return;
+    }
+    if (e.target.closest('[data-act="save"]')) { commitCheckin(sheet.minutes); return; }
+    if (e.target.closest('[data-act="nodur"]')) { commitCheckin(null); return; }
+  });
+  if (input) input.addEventListener('input', function () {
+    var v = input.value.replace(/[^0-9]/g, '');
+    input.value = v;
+    var n = v === '' ? null : Math.min(1440, parseInt(v, 10));
+    sheet.minutes = n;
+    updateCheckin();
+  });
+  var note = $('#shNote');
+  if (note) note.addEventListener('input', function () { sheet.note = note.value; });
+}
+function closeSheet() {
+  var mask = $('#sheetRoot .mask'), sh = $('#sheetRoot .sheet');
+  if (!sh) { $('#sheetRoot').innerHTML = ''; return; }
+  if (mask) mask.classList.remove('show');
+  sh.classList.remove('show');
+  setTimeout(function () { $('#sheetRoot').innerHTML = ''; }, 300);
+}
+function commitCheckin(minutes) {
+  var h = sheet.habit, d = sheet.date;
+  var prev = recOf(h.id, d) || {};
+  var rec = {
+    status: 'done',
+    minutes: (typeof minutes === 'number' && minutes > 0) ? minutes : null,
+    note: sheet.note || '',
+    backfilled: sheet.mode === 'backfill' ? true : !!prev.backfilled,
+    at: new Date().toISOString()
+  };
+  setRec(h.id, d, rec);
+  save();
+  closeSheet();
+  render();
+  if (sheet.mode === 'new') toast(h.name + ' 已打卡');
+  else if (sheet.mode === 'backfill') toast('已补打 ' + fmtDateShort(d));
+  else toast('已保存');
+}
+
+/* ---------- 请假弹层 ---------- */
+var leaveForm = { hid: null, date: null, reason: '', note: '', mode: 'new' };
+function openLeave(hid, date, mode) {
+  var h = habitById(hid);
+  var r = recOf(hid, date);
+  var used = quotaUsed(hid, 'leave');
+  var isEdit = (mode === 'edit');
+  leaveForm = {
+    hid: hid, date: date, mode: mode || 'new',
+    reason: (isEdit && r) ? (r.leaveReason || '') : '',
+    note: (isEdit && r) ? (r.note || '') : ''
+  };
+  var remain = QUOTA_MAX - used + (isEdit ? 1 : 0);
+
+  var html = '<div class="mask" data-close="1"></div><div class="sheet show">' +
+    '<div class="grip"></div>' +
+    '<div class="shtitle">' + (isEdit ? '修改请假事由' : h.name + '请假') + '</div>' +
+    '<div class="shsub">说明一下今天为什么不能完成 · 连续天数不会中断</div>' +
+    '<div class="reason" id="lvReasons">' + LEAVE_REASONS.map(function (x) {
+      return '<button data-r="' + x + '"' + (leaveForm.reason === x ? ' class="on"' : '') + '>' + x + '</button>';
+    }).join('') + '</div>' +
+    '<textarea class="noteinput" id="lvNote" placeholder="写下今天的情况（必填）…">' + esc(leaveForm.note) + '</textarea>' +
+    '<div class="shhint" id="lvHint"></div>' +
+    '<div class="shhint" style="display:flex;align-items:center;gap:6px;margin-top:7px">' +
+      '本周请假额度 ' + quotaDots(isEdit ? used - 1 : used, 'leave') +
+      ' <b>' + (isEdit ? used - 1 : used) + ' / ' + QUOTA_MAX + '</b> 天' +
+      (remain > 0 ? ' · 还剩 ' + remain + ' 天' : '') + '</div>' +
+    '<div class="shacts">' +
+    '<button class="pbtn amber" id="lvOk" data-act="ok" disabled>' + (isEdit ? '保存' : '确认请假') + '</button>' +
+    '<button class="sbtn" data-close="1">取消</button>' +
+    '</div></div>';
+
+  var root = $('#sheetRoot');
+  root.innerHTML = html;
+
+  function sync() {
+    var noteEl = $('#lvNote');
+    var okEl = $('#lvOk');
+    var hint = $('#lvHint');
+    leaveForm.note = noteEl.value;
+    var filled = leaveForm.note.trim().length > 0;
+    okEl.disabled = !filled;
+    if (filled) {
+      hint.innerHTML = '<b class="amber">✓ 已填写</b> · 事由会保存在记录里，之后可以改';
+    } else {
+      hint.innerHTML = '请写下原因，这样才能确认请假';
+    }
+  }
+  root.addEventListener('click', function (e) {
+    if (e.target.closest('[data-close]')) { closeSheet(); return; }
+    var rb = e.target.closest('[data-r]');
+    if (rb) {
+      var rv = rb.dataset.r;
+      leaveForm.reason = (leaveForm.reason === rv) ? '' : rv;
+      $$('#lvReasons button').forEach(function (b) { b.classList.toggle('on', b.dataset.r === leaveForm.reason); });
+      var noteEl = $('#lvNote');
+      if (leaveForm.reason && !noteEl.value.trim()) noteEl.value = leaveForm.reason;
+      sync();
+      return;
+    }
+    if (e.target.closest('[data-act="ok"]')) {
+      if (!leaveForm.note.trim()) return;
+      var prev = recOf(leaveForm.hid, leaveForm.date) || {};
+      setRec(leaveForm.hid, leaveForm.date, {
+        status: 'leave',
+        leaveReason: leaveForm.reason || '',
+        note: leaveForm.note.trim(),
+        backfilled: leaveForm.mode === 'backfill' ? true : !!prev.backfilled,
+        at: new Date().toISOString()
+      });
+      save(); closeSheet(); render();
+      toast(isEdit ? '已保存' : '已请假，连续不中断');
+    }
+  });
+  var ne = $('#lvNote');
+  if (ne) ne.addEventListener('input', sync);
+  sync();
+}
+
+/* ---------- 备注弹层（戒撸） ---------- */
+function openNoteSheet(hid, date) {
+  var h = habitById(hid), r = recOf(hid, date) || {};
+  var root = $('#sheetRoot');
+  root.innerHTML = '<div class="mask" data-close="1"></div><div class="sheet show">' +
+    '<div class="grip"></div><div class="shtitle">今天坚持住了</div>' +
+    '<div class="shsub">很好，又多了一天。</div>' +
+    '<textarea class="note show" id="ntNote" maxlength="50" rows="3" placeholder="想记点什么？（可选）">' + esc(r.note || '') + '</textarea>' +
+    '<div class="shacts"><button class="pbtn" data-act="ok">确认</button>' +
+    '<button class="sbtn" data-close="1">取消</button></div></div>';
+  root.addEventListener('click', function (e) {
+    if (e.target.closest('[data-close]')) { closeSheet(); return; }
+    if (e.target.closest('[data-act="ok"]')) {
+      var nv = $('#ntNote').value;
+      var prev = recOf(hid, date) || {};
+      prev.note = nv;
+      prev.at = prev.at || new Date().toISOString();
+      if (!prev.status) prev.status = 'kept';
+      setRec(hid, date, prev);
+      save(); closeSheet(); render(); toast('已保存');
+    }
+  });
+}
+
+/* ============================================================
+   一键补齐
+   ============================================================ */
+function batchBackfill() {
+  var t = todayISO(), hs = activeHabits();
+  var plan = [];
+  for (var i = 7; i >= 1; i--) {
+    var d = addDays(t, -i);
+    var need = hs.filter(function (h) { return !recOf(h.id, d); });
+    if (need.length) plan.push({ date: d, need: need });
+  }
+  if (!plan.length) { toast('最近 7 天都已经有记录了'); return; }
+  var lines = plan.map(function (p) {
+    return fmtDateShort(p.date) + '：' + p.need.map(function (h) { return esc(h.name); }).join('、');
+  }).join('<br>');
+  confirmDlg('一键补齐最近 7 天？',
+    '下面这些会按各自的默认时长记为「补打」，已有记录不动（休息日和请假不会被动到）：<br><br>' + lines,
+    '全部补齐', function () {
+      var n = 0;
+      plan.forEach(function (p) {
+        p.need.forEach(function (h) {
+          if (h.type === 'abstain') {
+            setRec(h.id, p.date, { status: 'kept', note: '', backfilled: true, at: new Date().toISOString() });
+          } else {
+            var last = lastMinutes(h.id);
+            var goal = h.goalMinutes > 0 ? h.goalMinutes : null;
+            var m = (last != null) ? last : goal;
+            setRec(h.id, p.date, { status: 'done', minutes: m, note: '', backfilled: true, at: new Date().toISOString() });
+          }
+          n++;
+        });
+      });
+      save(); render();
+      toast('已补齐 ' + n + ' 条记录');
+    });
+}
+
+/* ============================================================
+   习惯编辑页
+   ============================================================ */
+var editor = { id: null, name: '', icon: '📖', color: 'green', type: 'check', goal: 30, allowRest: false, allowLeave: false };
+function freeColor() {
+  var used = S.habits.map(function (h) { return h.color; });
+  var keys = Object.keys(PALETTE);
+  for (var i = 0; i < keys.length; i++) if (used.indexOf(keys[i]) < 0) return keys[i];
+  return keys[S.habits.length % keys.length];
+}
+function openEditor(id) {
+  var isNew = !id;
+  if (isNew) editor = { id: null, name: '', icon: '📖', color: freeColor(), type: 'check', goal: 30, allowRest: false, allowLeave: false };
+  else {
+    var h = habitById(id);
+    editor = {
+      id: id, name: h.name, icon: h.icon, color: h.color, type: h.type,
+      goal: h.goalMinutes || 0, allowRest: !!h.allowRest, allowLeave: !!h.allowLeave
+    };
+  }
+  drawEditor();
+  $('#pageRoot').classList.add('show');
+}
+function closeEditor() { $('#pageRoot').classList.remove('show'); }
+function drawEditor() {
+  var isNew = !editor.id;
+  var html = '<div class="page-in">' +
+    '<div class="phead"><button data-act="back">‹</button><b>' + (isNew ? '添加习惯' : '编辑习惯') + '</b></div>' +
+
+    '<div class="field"><label>名称</label>' +
+    '<input type="text" id="edName" maxlength="8" placeholder="如：阅读" value="' + esc(editor.name) + '"></div>' +
+
+    '<div class="field"><label>类型</label><div class="typecards">' +
+    '<button class="typecard' + (editor.type === 'check' ? ' on' : '') + '" data-act="type" data-v="check"' + (isNew ? '' : ' disabled') + '>' +
+    '<b>完成型</b>做一件事，如英语、健身</button>' +
+    '<button class="typecard' + (editor.type === 'abstain' ? ' on' : '') + '" data-act="type" data-v="abstain"' + (isNew ? '' : ' disabled') + '>' +
+    '<b>戒断型</b>戒掉一件事，如戒撸、戒烟</button>' +
+    '</div>' + (isNew ? '' : '<div class="hint">类型创建后不可更改</div>') + '</div>' +
+
+    (editor.type === 'check' ? '<div class="field"><label>每日目标（分钟）</label>' +
+      '<input type="number" id="edGoal" min="0" max="1440" placeholder="0" value="' + (editor.goal || '') + '">' +
+      '<div class="hint">留空或填 0 表示不设目标</div></div>' : '') +
+
+    (editor.type === 'check' ? '<div class="field"><label>可用的例外状态</label><div class="typecards">' +
+      '<button class="typecard' + (editor.allowRest ? ' on' : '') + '" data-act="allowRest">' +
+      '<b>休息日</b>' + (editor.allowRest ? '已开启 · 每周最多 3 天' : '开启后可标休息日') + '</button>' +
+      '<button class="typecard' + (editor.allowLeave ? ' on' : '') + '" data-act="allowLeave">' +
+      '<b>请假</b>' + (editor.allowLeave ? '已开启 · 每周最多 3 天' : '开启后需填写事由') + '</button>' +
+      '</div><div class="hint">两者都不中断连续，也不计入完成率</div></div>' : '') +
+
+    '<div class="field"><label>图标</label><div class="picker">' +
+    ICONS.map(function (i) {
+      return '<button class="' + (editor.icon === i ? 'on' : '') + '" data-act="icon" data-v="' + i + '">' + i + '</button>';
+    }).join('') + '</div></div>' +
+
+    '<div class="field"><label>颜色</label><div class="picker col">' +
+    Object.keys(PALETTE).map(function (k) {
+      return '<button class="' + (editor.color === k ? 'on' : '') + '" data-act="color" data-v="' + k + '" style="--pc:' + PALETTE[k].bg + '"></button>';
+    }).join('') + '</div></div>' +
+
+    '<div class="pfoot"><button class="pbtn" data-act="save">' + (isNew ? '创建习惯' : '保存') + '</button>' +
+    (!isNew ? '<button class="sbtn" data-act="archive">归档（保留历史，从今日页隐藏）</button>' +
+      '<button class="danger" data-act="del">删除习惯</button>' : '') +
+    '</div></div>';
+  $('#pageRoot').innerHTML = html;
+
+  $('#pageRoot').onclick = function (e) {
+    var b = e.target.closest('[data-act]');
+    if (!b) return;
+    var act = b.dataset.act;
+    if (act === 'back') { closeEditor(); return; }
+    if (act === 'type') { syncEditor(); editor.type = b.dataset.v; drawEditor(); return; }
+    if (act === 'allowRest') { syncEditor(); editor.allowRest = !editor.allowRest; drawEditor(); return; }
+    if (act === 'allowLeave') { syncEditor(); editor.allowLeave = !editor.allowLeave; drawEditor(); return; }
+    if (act === 'icon') { syncEditor(); editor.icon = b.dataset.v; drawEditor(); return; }
+    if (act === 'color') { syncEditor(); editor.color = b.dataset.v; drawEditor(); return; }
+    if (act === 'save') { syncEditor(); saveHabit(); return; }
+    if (act === 'archive') {
+      confirmDlg('归档「' + esc(editor.name) + '」？', '历史记录会完整保留，但会从今日页和记录页隐藏。', '归档', function () {
+        var hh = habitById(editor.id); hh.archived = true; save(); closeEditor(); render(); toast('已归档');
+      });
+      return;
+    }
+    if (act === 'del') {
+      var hh2 = habitById(editor.id);
+      var extra = hh2.builtin ? '这是内置习惯，' : '';
+      confirmDlg('删除「' + esc(hh2.name) + '」？',
+        extra + '该习惯的全部历史记录（' + totalDays(hh2) + ' 天 / ' + fmtMin(totalMinutes(hh2)) + '）将一并删除，无法恢复。',
+        '删除', function () {
+          S.habits = S.habits.filter(function (x) { return x.id !== editor.id; });
+          delete S.records[editor.id];
+          save(); closeEditor(); render(); toast('已删除');
+        }, true);
+      return;
+    }
+  };
+}
+function syncEditor() {
+  var n = $('#edName'); if (n) editor.name = n.value.trim();
+  var g = $('#edGoal'); if (g) editor.goal = Math.max(0, Math.min(1440, parseInt(g.value, 10) || 0));
+}
+function saveHabit() {
+  if (!editor.name) { toast('请填写名称'); var n = $('#edName'); if (n) n.focus(); return; }
+  if (editor.id) {
+    var h = habitById(editor.id);
+    h.name = editor.name; h.icon = editor.icon; h.color = editor.color;
+    if (h.type === 'check') {
+      h.goalMinutes = editor.goal;
+      h.allowRest = editor.allowRest;
+      h.allowLeave = editor.allowLeave;
+    }
+  } else {
+    S.habits.push({
+      id: 'h' + Date.now(), name: editor.name, icon: editor.icon, color: editor.color,
+      type: editor.type, goalMinutes: editor.type === 'check' ? editor.goal : 0,
+      sort: S.habits.length, builtin: false, archived: false, createdAt: todayISO(),
+      allowRest: editor.type === 'check' ? editor.allowRest : false,
+      allowLeave: editor.type === 'check' ? editor.allowLeave : false
+    });
+  }
+  save(); closeEditor(); render(); toast(editor.id ? '已保存' : '已创建');
+}
+
+/* ============================================================
+   导出 / 导入 / 清空
+   ============================================================ */
+function exportData() {
+  var data = JSON.parse(JSON.stringify(S));
+  data.exportedAt = new Date().toISOString();
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '坚持-备份-' + todayISO() + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  S.settings.lastBackupAt = new Date().toISOString();
+  save(); render(); toast('已导出备份');
+}
+function importData() {
+  var inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json,application/json';
+  inp.onchange = function () {
+    var f = inp.files && inp.files[0];
+    if (!f) return;
+    var rd = new FileReader();
+    rd.onload = function () {
+      var d;
+      try { d = JSON.parse(rd.result); } catch (e) { toast('文件格式不正确'); return; }
+      if (!d || !d.habits || !d.records) { toast('不是「坚持」的备份文件'); return; }
+      confirmDlg('导入将覆盖当前数据？',
+        '当前 ' + totalRecordDays() + ' 天的记录会被替换为备份中的数据。',
+        '导入', function () {
+          S = d;
+          if (!S.settings) S.settings = { lastBackupAt: null, createdAt: todayISO() };
+          S.habits.forEach(function (h) {
+            if (typeof h.allowRest === 'undefined') h.allowRest = (h.id === 'fit');
+            if (typeof h.allowLeave === 'undefined') h.allowLeave = (h.id === 'en');
+          });
+          save(); render(); toast('导入完成');
+        }, true);
+    };
+    rd.readAsText(f);
+  };
+  inp.click();
+}
+function clearAll() {
+  confirmDlg('清空所有数据？',
+    '全部习惯与打卡记录都会被删除，且无法恢复。建议先导出备份。',
+    '继续', function () {
+      confirmDlg('最后确认', '真的要清空吗？此操作不可撤销。', '确认清空', function () {
+        S = defaultState(); save(); render(); toast('已清空');
+      }, true);
+    }, true);
+}
+
+/* ============================================================
+   渲染与事件
+   ============================================================ */
+var tab = 'today';
+function moveThumb() {
+  var idx = ['today', 'records', 'mine'].indexOf(tab);
+  var th = $('#tabbar .thumb');
+  if (th) th.style.transform = 'translateX(' + (idx * 100) + '%)';
+}
+function render() {
+  var html = tab === 'today' ? renderToday() : (tab === 'records' ? renderRecords() : renderMine());
+  $('#view').innerHTML = html;
+  $$('#tabbar button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
+  moveThumb();
+  if (tab === 'today') {
+    var hs = activeHabits(), t = todayISO();
+    if (hs.length && hs.every(function (h) { return isDone(h, t); })) {
+      var sum = $('.sum-l');
+      if (sum && !sum.dataset.popped) {
+        sum.dataset.popped = '1';
+        var card = $('.sum');
+        card.classList.add('pop');
+        setTimeout(function () { card.classList.remove('pop'); }, 460);
+      }
+    }
+  }
+}
+$('#tabbar').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-tab]');
+  if (!b) return;
+  tab = b.dataset.tab;
+  window.scrollTo(0, 0);
+  render();
+});
+$('#view').addEventListener('click', function (e) {
+  var el = e.target.closest('[data-act]');
+  if (!el) return;
+  var act = el.dataset.act, hid = el.dataset.hid, date = el.dataset.date;
+  if (act === 'newHabit') { openEditor(null); return; }
+  if (act === 'noop') { toast('提醒功能还没做，先手动打卡吧'); return; }
+  if (act === 'checkin') { openCheckin(hid, date, 'new'); return; }
+  if (act === 'edit') { openCheckin(hid, date, 'edit'); return; }
+  if (act === 'note') { openNoteSheet(hid, date); return; }
+  if (act === 'leave') { openLeave(hid, date, 'new'); return; }
+  if (act === 'editLeave') { openLeave(hid, date, 'edit'); return; }
+  if (act === 'rest') {
+    var hr = habitById(hid);
+    var used = quotaUsed(hid, 'rest');
+    if (used >= QUOTA_MAX) { toast('本周休息日已用满，下周一重置'); return; }
+    setRec(hid, date, { status: 'rest', note: '', backfilled: false, at: new Date().toISOString() });
+    save(); render();
+    var left = QUOTA_MAX - used - 1;
+    toast('已标为休息日 · 连续不中断' + (left > 0 ? '（本周还剩 ' + left + ' 天）' : '（本周已用满）'));
+    return;
+  }
+  if (act === 'cancelExcuse') {
+    var hc = habitById(hid);
+    confirmDlg('取消' + (recStatus(hc, recOf(hid, date)) === 'rest' ? '休息日' : '请假') + '？',
+      '取消后这一天会回到「未记录」状态。', '取消标记', function () {
+        delRec(hid, date); save(); render(); toast('已取消');
+      }, true);
+    return;
+  }
+  if (act === 'undo') {
+    var h = habitById(hid);
+    confirmDlg('撤销「' + esc(h.name) + '」？', '这一天的记录会被删除，连续天数会重新计算。', '撤销', function () {
+      delRec(hid, date); save(); render(); toast('已撤销');
+    }, true);
+    return;
+  }
+  if (act === 'keep') {
+    var hk = habitById(hid);
+    setRec(hid, date, { status: 'kept', note: '', backfilled: false, at: new Date().toISOString() });
+    save(); render(); toast(hk.name + ' 今天已坚持');
+    return;
+  }
+  if (act === 'reset') {
+    var hr2 = habitById(hid);
+    var cur = streak(hr2), best = bestStreak(hr2);
+    confirmDlg('确定要重新开始吗？',
+      '当前连续 ' + cur + ' 天将归零。历史最长记录（' + best + ' 天）和累计坚持天数会保留。',
+      '确定重新开始', function () {
+        setRec(hid, date, { status: 'relapse', note: '', backfilled: false, at: new Date().toISOString() });
+        save(); render(); toast('已重新开始，明天继续');
+      }, true);
+    return;
+  }
+  if (act === 'pick') { recView.hid = hid; render(); return; }
+  if (act === 'prev') { recView.m--; if (recView.m < 0) { recView.m = 11; recView.y--; } render(); return; }
+  if (act === 'next') {
+    var td2 = new Date();
+    if (recView.y === td2.getFullYear() && recView.m === td2.getMonth()) return;
+    recView.m++; if (recView.m > 11) { recView.m = 0; recView.y++; }
+    render(); return;
+  }
+  if (act === 'toToday') {
+    var tn = new Date();
+    recView.y = tn.getFullYear(); recView.m = tn.getMonth(); recView.sel = todayISO();
+    render(); return;
+  }
+  if (act === 'day') {
+    recView.sel = date;
+    render();
+    var dc = document.querySelector('.dcard');
+    if (dc) dc.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    else toast('补卡请切到对应习惯');
+    return;
+  }
+  if (act === 'dayEdit') {
+    var hd = habitById(hid);
+    var sd = recStatus(hd, recOf(hid, date));
+    if (sd === 'rest' || sd === 'leave') openLeave(hid, date, 'edit');
+    else if (hd.type === 'abstain') openNoteSheet(hid, date);
+    else openCheckin(hid, date, 'edit');
+    return;
+  }
+  if (act === 'dayBack') {
+    var hb3 = habitById(hid);
+    if (hb3.type === 'abstain') {
+      setRec(hid, date, { status: 'kept', note: '', backfilled: true, at: new Date().toISOString() });
+      save(); render(); toast('已补打 ' + fmtDateShort(date));
+    } else openCheckin(hid, date, 'backfill');
+    return;
+  }
+  if (act === 'dayRest') {
+    setRec(hid, date, { status: 'rest', note: '', backfilled: true, at: new Date().toISOString() });
+    save(); render(); toast('已补标休息日');
+    return;
+  }
+  if (act === 'dayLeave') { openLeave(hid, date, 'backfill'); return; }
+  if (act === 'dayDel') {
+    var hdd = habitById(hid);
+    confirmDlg('删除这条记录？', '「' + esc(hdd.name) + '」在 ' + fmtDateShort(date) + ' 的记录会被删除，统计会随之变化。',
+      '删除', function () { delRec(hid, date); save(); render(); toast('已删除'); }, true);
+    return;
+  }
+  if (act === 'batchBack') { batchBackfill(); return; }
+  if (act === 'editHabit') { openEditor(hid); return; }
+  if (act === 'up' || act === 'down') {
+    var hs = activeHabits();
+    var i = hs.map(function (x) { return x.id; }).indexOf(hid);
+    var j = act === 'up' ? i - 1 : i + 1;
+    if (j < 0 || j >= hs.length) return;
+    var a = hs[i], b = hs[j];
+    var tmp = a.sort; a.sort = b.sort; b.sort = tmp;
+    save(); render(); return;
+  }
+  if (act === 'export') { exportData(); return; }
+  if (act === 'import') { importData(); return; }
+  if (act === 'clear') { clearAll(); return; }
+});
+
+document.addEventListener('visibilitychange', function () {
+  if (!document.hidden && !$('#sheetRoot').innerHTML.trim()) render();
+});
+
+render();
+
+/* 离线支持 */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
