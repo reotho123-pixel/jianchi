@@ -296,15 +296,15 @@ button{cursor:pointer;border:0;background:none}
 .navin button.on{color:var(--ink)}
 
 /* ---------- 弹层 ---------- */
-.mask{position:fixed;inset:0;background:rgba(26,26,26,.32);z-index:50;opacity:0;transition:opacity .24s ease}
-.mask.show{opacity:1}
+.mask{position:fixed;inset:0;background:rgba(26,26,26,.32);z-index:50;opacity:0}
 .sheet{
   position:fixed;left:0;right:0;bottom:0;z-index:51;max-width:480px;margin:0 auto;
   background:var(--bg);border-radius:30px 30px 0 0;padding:10px 20px calc(22px + env(safe-area-inset-bottom));
-  transform:translateY(102%);transition:transform .3s cubic-bezier(.22,.7,.3,1);
   max-height:90vh;overflow-y:auto;
+  visibility:hidden;
 }
-.sheet.show{transform:translateY(0)}
+/* 形变动画期间由 JS 控制，不设 CSS 过渡，避免互相打架 */
+.sheet.anim{visibility:visible}
 .grip{width:38px;height:4px;border-radius:99px;background:#D8D8D2;margin:4px auto 16px}
 .shtitle{font-size:19px}
 .shsub{font-size:13px;color:var(--muted);margin-top:5px;margin-bottom:16px;line-height:1.6}
@@ -677,6 +677,90 @@ function weekBar() {
     out.push({ d: d, kind: kind, future: d > t });
   }
   return out;
+}
+
+/* ============================================================
+   形变动效（A 版）：面板从被点按钮的形状和位置长出来
+   ============================================================ */
+var MORPH_DUR = 620;
+var MORPH_EASE = 'cubic-bezier(.22,.9,.24,1)';
+
+/* 找到触发这次弹层的按钮，返回它在屏幕上的位置 */
+function sourceRect(el) {
+  var src = el || window.__lastTap || null;
+  if (!src || !src.getBoundingClientRect) return null;
+  var r = src.getBoundingClientRect();
+  if (!r.width || !r.height) return null;
+  return r;
+}
+/* 记录最后一次点击的按钮（事件委托里拿不到时兜底） */
+document.addEventListener('pointerdown', function (e) {
+  var t = e.target && e.target.closest ? e.target.closest('button') : null;
+  if (t) window.__lastTap = t;
+}, true);
+
+/* 播放形变：sheet 从按钮位置/尺寸/圆角 变到 最终位置/尺寸/圆角 */
+function morphIn(sheet, mask, inner, srcEl) {
+  var sr = sourceRect(srcEl);
+  var tr = sheet.getBoundingClientRect();          /* 最终位置（已在 DOM 中） */
+  var from = null;
+  if (sr) {
+    from = {
+      transform: 'translate(' + (sr.left - tr.left) + 'px,' + (sr.top - tr.top) + 'px)',
+      width: sr.width + 'px',
+      height: sr.height + 'px',
+      borderRadius: '999px',
+      opacity: .5
+    };
+  } else {
+    from = { transform: 'translateY(90px) scale(.94)', opacity: 0, borderRadius: '34px 34px 0 0' };
+  }
+  var to = {
+    transform: 'translate(0,0)',
+    width: tr.width + 'px',
+    height: tr.height + 'px',
+    borderRadius: '30px 30px 0 0',
+    opacity: 1
+  };
+  /* 面板尺寸从按钮尺寸长到最终尺寸；用固定定位保证左上角锚点不漂 */
+  sheet.style.visibility = 'visible';
+  var a1 = sheet.animate([from, to], { duration: MORPH_DUR, easing: MORPH_EASE, fill: 'both' });
+  var a2 = mask.animate([{ opacity: 0 }, { opacity: 1 }], { duration: MORPH_DUR, easing: 'ease-out', fill: 'both' });
+  var a3 = inner ? inner.animate([
+    { opacity: 0, transform: 'translateY(14px)' },
+    { opacity: 0, transform: 'translateY(14px)', offset: .62 },
+    { opacity: 1, transform: 'translateY(0)' }
+  ], { duration: MORPH_DUR, easing: 'ease-out', fill: 'both' }) : null;
+  return [a1, a2, a3].filter(Boolean);
+}
+/* 反向：原路收回到按钮 */
+function morphOut(sheet, mask, inner, srcEl, done) {
+  var anims = [];
+  var sr = sourceRect(srcEl);
+  var tr = sheet.getBoundingClientRect();
+  var to = sr
+    ? { transform: 'translate(' + (sr.left - tr.left) + 'px,' + (sr.top - tr.top) + 'px)',
+        width: sr.width + 'px', height: sr.height + 'px', borderRadius: '999px', opacity: .4 }
+    : { transform: 'translateY(90px) scale(.94)', opacity: 0 };
+  anims.push(sheet.animate([
+    { transform: 'translate(0,0)', width: tr.width + 'px', height: tr.height + 'px',
+      borderRadius: '30px 30px 0 0', opacity: 1 },
+    to
+  ], { duration: 420, easing: 'cubic-bezier(.4,0,.7,.3)', fill: 'both' }));
+  anims.push(mask.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 420, easing: 'ease-in', fill: 'both' }));
+  if (inner) anims.push(inner.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, easing: 'ease-in', fill: 'both' }));
+  /* 用 finished promise 收尾：onfinish 里再 cancel 会变成 oncancel，回调不触发 */
+  var main = anims[0];
+  var finish = function () {
+    sheet.style.visibility = 'hidden';
+    if (done) done();
+  };
+  if (main.finished && main.finished.then) {
+    main.finished.then(finish).catch(finish);
+  } else {
+    main.onfinish = finish;
+  }
+  return anims;
 }
 
 /* ============================================================
@@ -1219,7 +1303,7 @@ function drawCheckin() {
   var title = isBack ? '补打 ' + fmtDateShort(sheet.date) : (isEdit ? '改时长 · ' + h.name : h.name + '打卡');
   var sub = isBack ? '这一天的记录会标记为「补打」' : (isEdit ? '修改后立即生效' : '选一个时长，或直接打卡');
 
-  var html = '<div class="mask" data-close="1"></div><div class="sheet show">' +
+  var html = '<div class="mask" data-close="1"></div><div class="sheet">' +
     '<div class="grip"></div>' +
     '<div class="shtitle">' + esc(title) + '</div><div class="shsub">' + sub + '</div>' +
     '<div class="bignum2" id="shNum">' + ((sheet.minutes == null) ? 0 : sheet.minutes) + '<span>分钟</span></div>' +
@@ -1244,6 +1328,16 @@ function drawCheckin() {
   root.innerHTML = html;
   bindCheckin();
   updateCheckin();
+  playSheetMorph();
+}
+/* 播放形变进场：所有弹层渲染完后调用 */
+function playSheetMorph() {
+  var sheetEl = $('#sheetRoot .sheet');
+  var maskEl = $('#sheetRoot .mask');
+  if (!sheetEl || !maskEl) return;
+  var inner = sheetEl.firstElementChild || sheetEl;
+  var anims = morphIn(sheetEl, maskEl, inner, window.__lastTap);
+  window.__sheetAnims = anims;
 }
 function updateCheckin() {
   var h = sheet.habit, goal = h.goalMinutes || 0, m = sheet.minutes;
@@ -1290,9 +1384,15 @@ function bindCheckin() {
 function closeSheet() {
   var mask = $('#sheetRoot .mask'), sh = $('#sheetRoot .sheet');
   if (!sh) { $('#sheetRoot').innerHTML = ''; return; }
-  if (mask) mask.classList.remove('show');
-  sh.classList.remove('show');
-  setTimeout(function () { $('#sheetRoot').innerHTML = ''; }, 300);
+  /* 若有进行中的进场动画，先取消再反向收回 */
+  if (window.__sheetAnims) {
+    window.__sheetAnims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+    window.__sheetAnims = null;
+  }
+  var inner = sh.firstElementChild || sh;
+  morphOut(sh, mask, inner, window.__lastTap, function () {
+    $('#sheetRoot').innerHTML = '';
+  });
 }
 function commitCheckin(minutes) {
   var h = sheet.habit, d = sheet.date;
@@ -1327,7 +1427,7 @@ function openLeave(hid, date, mode) {
   };
   var remain = QUOTA_MAX - used + (isEdit ? 1 : 0);
 
-  var html = '<div class="mask" data-close="1"></div><div class="sheet show">' +
+  var html = '<div class="mask" data-close="1"></div><div class="sheet">' +
     '<div class="grip"></div>' +
     '<div class="shtitle">' + (isEdit ? '修改请假事由' : h.name + '请假') + '</div>' +
     '<div class="shsub">说明一下今天为什么不能完成 · 连续天数不会中断</div>' +
@@ -1347,6 +1447,7 @@ function openLeave(hid, date, mode) {
 
   var root = $('#sheetRoot');
   root.innerHTML = html;
+  playSheetMorph();
 
   function sync() {
     var noteEl = $('#lvNote');
@@ -1396,12 +1497,13 @@ function openLeave(hid, date, mode) {
 function openNoteSheet(hid, date) {
   var h = habitById(hid), r = recOf(hid, date) || {};
   var root = $('#sheetRoot');
-  root.innerHTML = '<div class="mask" data-close="1"></div><div class="sheet show">' +
+  root.innerHTML = '<div class="mask" data-close="1"></div><div class="sheet">' +
     '<div class="grip"></div><div class="shtitle">今天坚持住了</div>' +
     '<div class="shsub">很好，又多了一天。</div>' +
     '<textarea class="note show" id="ntNote" maxlength="50" rows="3" placeholder="想记点什么？（可选）">' + esc(r.note || '') + '</textarea>' +
     '<div class="shacts"><button class="pbtn" data-act="ok">确认</button>' +
     '<button class="sbtn" data-close="1">取消</button></div></div>';
+  playSheetMorph();
   root.addEventListener('click', function (e) {
     if (e.target.closest('[data-close]')) { closeSheet(); return; }
     if (e.target.closest('[data-act="ok"]')) {
