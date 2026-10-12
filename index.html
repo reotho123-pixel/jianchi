@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <title>坚持</title>
 <meta name="theme-color" content="#F6F6F4">
 <meta name="description" content="英语 · 健身 · 戒撸，简单快速的打卡坚持工具">
@@ -25,6 +25,9 @@
   --tabbar-h:66px;
 }
 html{-webkit-text-size-adjust:100%}
+/* 禁止双指捏合缩放。viewport 的 user-scalable=no 在 iOS 上会被忽略，
+   touch-action 才是真正生效的那层；双击放大交给 touch-action:manipulation。 */
+html,body{touch-action:pan-x pan-y;overscroll-behavior:none}
 body{
   margin:0;background:radial-gradient(125% 58% at 50% 0%,#FCFCFA 0%,#F6F6F4 64%);
   background-attachment:fixed;
@@ -417,6 +420,22 @@ button{cursor:pointer;border:0;background:none}
 <div id="toast"></div>
 
 <script>
+/* 禁掉双指捏合缩放。加进主屏后还能捏小的话，露出的白边会让人一眼看出是网页。
+   viewport 的 user-scalable=no 在 iOS 上基本被忽略，真正管用的是这两条：
+     - gesturestart/change/end 是 iOS Safari 专有事件，拦掉即可
+     - touchmove 里判断多指兜底（部分 WebView 不发 gesture 事件）
+   注意：双击放大交给 CSS 的 touch-action:manipulation，
+   千万别在 touchend 里 preventDefault —— 那会把后续 click 一起吃掉，按钮全点不动。
+   iOS「辅助功能 → 缩放」的三指手势是系统级，网页拦不住也不该拦。 */
+(function lockZoom(){
+  ['gesturestart','gesturechange','gestureend'].forEach(function(ev){
+    document.addEventListener(ev, function(e){ e.preventDefault(); }, { passive:false });
+  });
+  document.addEventListener('touchmove', function(e){
+    if (e.touches && e.touches.length > 1) e.preventDefault();
+  }, { passive:false });
+})();
+
 /* ============================================================
    工具
    ============================================================ */
