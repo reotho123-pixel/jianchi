@@ -1,5 +1,5 @@
 /* 「坚持」Service Worker —— 改代码后把版本号 +1，已安装用户下次联网即自动更新 */
-const CACHE = 'jianchi-v7';
+const CACHE = 'jianchi-v8';
 /* 预缓存：应用外壳 + 字体规则 + 界面实际用到的字体分片（首次安装即可离线用） */
 const ASSETS = [
   './',

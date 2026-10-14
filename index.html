@@ -79,21 +79,14 @@ button{cursor:pointer;border:0;background:none}
 }
 .card.rr{transform:rotate(.55deg)}
 .card:first-of-type{margin-top:6px}
-/* 长按拖拽排序：拖动中的卡片抬起、其余卡片弹簧让位
-   注意 transform 由 JS 每帧写入（含原倾斜角），CSS 里不要再设 transform，否则互相覆盖 */
+/* 长按排序中的卡片：轻微抬起即可，不做位移动画
+   transform 由 JS 每帧写入（含原倾斜角），CSS 里不要再设 transform，否则互相覆盖 */
 .card.dragging{
-  box-shadow:0 16px 34px rgba(26,26,26,.2);
+  box-shadow:0 12px 26px rgba(26,26,26,.17);
   cursor:grabbing;
   position:relative;
 }
 body.dragging-card{touch-action:none;user-select:none;-webkit-user-select:none}
-body.dragging-card #view .card{will-change:transform}
-.dragghost{
-  border-radius:26px;margin-bottom:20px;
-  border:1.6px dashed rgba(26,26,26,.22);
-  background:rgba(26,26,26,.03);
-  opacity:0;transition:transform .3s cubic-bezier(.22,1,.36,1),opacity .18s ease;
-}
 .card.excused{background:linear-gradient(142deg,#EDEDE8 0%,#F5F5F1 100%)}
 .wm{position:absolute;right:-4px;top:-10px;font-size:56px;opacity:.16;transform:rotate(13deg);pointer-events:none;z-index:0}
 .ctop{display:flex;align-items:flex-start;gap:12px;position:relative;z-index:1}
@@ -1831,16 +1824,17 @@ function switchPill(hid) {
 }
 
 /* ============================================================
-   拖拽排序（今日页卡片）：长按拿起 → 跟手 → 其余卡片弹簧让位 → 松手提交
+   长按排序（今日页卡片）
+   长按拿起 → 卡片跟手 → 越过邻卡中线即时换位 → 松手保存顺序
+   这里刻意不做位移动画：换位就是真实列表重排，即时生效，没有虚线空槽、
+   没有其余卡片弹簧让位、松手后落位也没有过渡。
    ============================================================ */
 var drag = {
   el: null, hid: null, active: false, holdTimer: null,
-  startY: 0, startX: 0, ptrY: 0, insertIndex: 0, order: [], orderAtStart: [],
-  rects: [], pitch: 0, top0: 0, ghost: null, ghostBase: 0, tilt: '-0.5deg', origIndex: 0
+  startY: 0, startX: 0, grabOffset: 0, insertIndex: -1, tilt: '-.5deg', reordered: false
 };
-var LONGPRESS_MS = 320;
-var LONGPRESS_MOVE = 8;      /* 长按判定前允许的抖动 */
-var DRAG_PITCH_FALLBACK = 20;
+var LONGPRESS_MS = 300;
+var LONGPRESS_MOVE = 8;      /* 长按判定前允许的抖动，超过即视为滚动并取消 */
 
 function cardsInView() {
   return Array.prototype.slice.call(document.querySelectorAll('#view .card[data-hid]'));
@@ -1848,113 +1842,60 @@ function cardsInView() {
 function clearHold() {
   if (drag.holdTimer) { clearTimeout(drag.holdTimer); drag.holdTimer = null; }
 }
-/* 取消一切进行中的长按/拖拽（全局兜底，避免幽灵状态） */
-function cancelDrag(restore) {
+/* 让拖动中的卡片跟着指针：锚点是指针本身，所以与页面滚动无关 */
+function placeDragCard(ptrY) {
+  var el = drag.el;
+  if (!el) return;
+  el.style.transform = '';
+  var naturalTop = el.getBoundingClientRect().top;      /* 读换位后的自然位置 */
+  var ty = ptrY - drag.grabOffset - naturalTop;
+  el.style.transform = 'translate3d(0,' + ty + 'px,0) rotate(' + drag.tilt + ')';
+}
+/* 落点是第几号槽（在"其余卡片"里数，拖动项自己不参与几何） */
+function slotAt(ptrY) {
+  var others = cardsInView().filter(function (c) { return c !== drag.el; });
+  for (var i = 0; i < others.length; i++) {
+    var r = others[i].getBoundingClientRect();
+    if (ptrY < r.top + r.height / 2) return i;
+  }
+  return others.length;
+}
+function cancelDrag() {
   clearHold();
   if (!drag.el) { drag.active = false; return; }
   var el = drag.el;
+  var wasReordered = drag.reordered;
   el.classList.remove('dragging');
   el.style.zIndex = '';
-  el.style.transition = '';
   el.style.transform = '';
-  if (drag.ghost && drag.ghost.parentNode) { drag.ghost.remove(); }
-  drag.ghost = null;
   document.body.classList.remove('dragging-card');
-  drag.el = null; drag.hid = null; drag.active = false;
-  if (restore) render();
-}
-/* 每帧重算落点并驱动其余卡片弹簧让位（全部用视口坐标） */
-function dragMove(ptrY) {
-  var others = cardsInView().filter(function (c) { return c.dataset.hid !== drag.hid; });
-  var idx = Math.round((ptrY - drag.top0) / drag.pitch);
-  if (idx < 0) idx = 0;
-  if (idx > drag.order.length - 1) idx = drag.order.length - 1;
-  drag.insertIndex = idx;
-  /* 拖动项跟手（保留原倾斜角） */
-  var dy = ptrY - drag.startY;
-  drag.el.style.transform = 'translate3d(0,' + dy + 'px,0) rotate(' + drag.tilt + ') scale(1.03)';
-  /* 其余卡片让位：只有"原位置"与"落点"之间的那些才动，且是往空槽方向移动
-     from = 拖动项原始下标，idx = 落点下标：
-       idx > from → 中间那些（from<i<=idx）整体上移一格
-       idx < from → 中间那些（idx<=i<from）整体下移一格
-     这样预览几何和松手后的提交顺序一致（拖动项最终落在 idx） */
-  var from = drag.origIndex;
-  others.forEach(function (c) {
-    var i = drag.order.indexOf(c.dataset.hid);
-    if (i < 0) return;
-    var slots = 0;
-    if (idx > from && i > from && i <= idx) slots = -1;
-    else if (idx < from && i >= idx && i < from) slots = 1;
-    var ty = slots * drag.pitch;
-    var tilt = c.classList.contains('rr') ? '.55deg' : '-.5deg';
-    c.style.transition = 'transform .3s cubic-bezier(.22,1,.36,1)';
-    c.style.transform = ty
-      ? 'translate3d(0,' + ty + 'px,0) rotate(' + tilt + ')'
-      : 'translate3d(0,0,0) rotate(' + tilt + ')';
-  });
-  /* 空槽虚线：移到落点对应的槽位 */
-  if (drag.ghost) {
-    drag.ghost.style.transform = 'translate3d(0,' + ((idx - from) * drag.pitch) + 'px,0)';
-    drag.ghost.style.opacity = '1';
-  }
-}
-function commitDrag() {
-  var order = drag.order.slice();
-  var from = order.indexOf(drag.hid);
-  if (from < 0) { cancelDrag(false); return; }
-  order.splice(from, 1);
-  order.splice(drag.insertIndex, 0, drag.hid);
-  order.forEach(function (hid, i) {
-    var h = habitById(hid);
-    if (h) h.sort = i;
-  });
-  save();
-  var el = drag.el;
-  /* 先清掉临时样式再重渲染，避免残留 */
-  if (el) { el.style.transform = ''; el.style.transition = ''; el.style.zIndex = ''; }
-  cancelDrag(false);
-  render();
-  toast('顺序已保存');
+  drag.el = null; drag.hid = null; drag.active = false; drag.insertIndex = -1; drag.reordered = false;
+  /* 已经用 insertBefore 挪过 DOM 但手势被取消 → 重渲染回数据里的真实顺序 */
+  if (wasReordered) render();
 }
 document.addEventListener('pointerdown', function (e) {
   if (e.button != null && e.button !== 0) return;
   var card = e.target.closest ? e.target.closest('#view .card[data-hid]') : null;
   if (!card) return;
-  if (e.target.closest('button')) return;       /* 卡片里的按钮不触发拖拽 */
-  var hs = activeHabits();
-  if (hs.length < 2) return;
+  if (e.target.closest('button')) return;       /* 卡片里的按钮不触发长按排序 */
+  if (activeHabits().length < 2) return;
   drag.el = card; drag.hid = card.dataset.hid;
   drag.tilt = card.classList.contains('rr') ? '.55deg' : '-.5deg';
-  drag.startY = e.clientY; drag.startX = e.clientX; drag.ptrY = e.clientY;
-  drag.order = hs.map(function (h) { return h.id; });
-  drag.orderAtStart = drag.order.slice();
-  drag.origIndex = drag.order.indexOf(drag.hid);
+  drag.startY = e.clientY; drag.startX = e.clientX;
+  drag.grabOffset = e.clientY - card.getBoundingClientRect().top;
+  drag.insertIndex = -1;
+  drag.reordered = false;
   drag.active = false;
   clearHold();
   drag.holdTimer = setTimeout(function () {
     drag.holdTimer = null;
     drag.active = true;
-    var cards = cardsInView();
-    if (cards.length < 2) { cancelDrag(false); return; }
-    drag.rects = cards.map(function (c) { return c.getBoundingClientRect(); });
-    drag.top0 = drag.rects[0].top;
-    drag.pitch = (drag.rects.length > 1)
-      ? (drag.rects[drag.rects.length - 1].top - drag.rects[0].top) / (drag.rects.length - 1)
-      : (card.offsetHeight + DRAG_PITCH_FALLBACK);
-    if (drag.pitch < 20) drag.pitch = card.offsetHeight + DRAG_PITCH_FALLBACK;
-    var r = card.getBoundingClientRect();
-    card.style.zIndex = '30';
-    card.style.transition = 'none';
     card.classList.add('dragging');
+    card.style.zIndex = '30';
     document.body.classList.add('dragging-card');
-    /* 空槽虚线（插在卡片原位置） */
-    var g = document.createElement('div');
-    g.className = 'dragghost';
-    g.style.height = r.height + 'px';
-    card.parentNode.insertBefore(g, card);
-    drag.ghost = g;
-    drag.insertIndex = drag.origIndex;
-    if (navigator.vibrate) { try { navigator.vibrate(12); } catch (err) {} }
+    drag.insertIndex = slotAt(e.clientY);
+    placeDragCard(e.clientY);
+    if (navigator.vibrate) { try { navigator.vibrate(10); } catch (err) {} }
   }, LONGPRESS_MS);
 }, true);
 document.addEventListener('pointermove', function (e) {
@@ -1962,23 +1903,46 @@ document.addEventListener('pointermove', function (e) {
   if (!drag.active) {
     /* 长按判定前移太多 → 视为滚动，取消 */
     if (Math.abs(e.clientY - drag.startY) > LONGPRESS_MOVE || Math.abs(e.clientX - drag.startX) > LONGPRESS_MOVE) {
-      cancelDrag(false);
+      cancelDrag();
     }
     return;
   }
   if (e.cancelable) e.preventDefault();
-  drag.ptrY = e.clientY;
-  dragMove(e.clientY);
+  var idx = slotAt(e.clientY);
+  if (idx !== drag.insertIndex) {
+    drag.insertIndex = idx;
+    var others = cardsInView().filter(function (c) { return c !== drag.el; });
+    drag.el.parentNode.insertBefore(drag.el, others[idx] || null);
+    drag.reordered = true;
+  }
+  placeDragCard(e.clientY);
+}, { passive: false, capture: true });
+/* 关键：touch-action 必须在触摸开始前就声明，长按后再设 body 的 touch-action 无效；
+   所以长按激活后靠非被动 touchmove 的 preventDefault 才能真正止住页面滚动 */
+document.addEventListener('touchmove', function (e) {
+  if (drag.active && e.cancelable) e.preventDefault();
 }, { passive: false, capture: true });
 document.addEventListener('pointerup', function () {
   if (!drag.el) return;
-  if (drag.active) commitDrag();
-  else cancelDrag(false);
+  if (!drag.active) { cancelDrag(); return; }
+  /* 提交：直接按当前 DOM 顺序写 sort */
+  var before = activeHabits().map(function (h) { return h.id; }).join(',');
+  var order = cardsInView().map(function (c) { return c.dataset.hid; });
+  order.forEach(function (hid, i) {
+    var h = habitById(hid);
+    if (h) h.sort = i;
+  });
+  save();
+  var changed = order.join(',') !== before;
+  drag.reordered = false;                      /* 提交路径自己会 render，别让 cancelDrag 再渲染一次 */
+  cancelDrag();
+  render();                                    /* 重渲染以校正卡片倾斜角等派生样式 */
+  if (changed) toast('顺序已保存');
 }, true);
 document.addEventListener('pointercancel', function () {
-  if (drag.el) cancelDrag(false);
+  if (drag.el) cancelDrag();
 }, true);
-window.addEventListener('blur', function () { if (drag.el) cancelDrag(true); });
+window.addEventListener('blur', function () { if (drag.el) cancelDrag(); });
 
 /* ============================================================
    渲染与事件
