@@ -49,7 +49,9 @@ button{cursor:pointer;border:0;background:none}
 }
 
 /* ---------- 顶部（B 版：紧凑，无假状态栏） ---------- */
-.topRow{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.topRow{display:flex;align-items:center;gap:12px;margin-bottom:12px;position:relative}
+/* 今日页标题整行居中（左上角头像已去掉，直接居中即可） */
+.topRow .tmain.ctr{flex:1;min-width:0;text-align:center}
 .ava{width:42px;height:42px;border-radius:50%;background:var(--soft);color:#fff;display:grid;place-items:center;font-size:16px;flex:0 0 auto}
 .tmain{flex:1;min-width:0}
 .topr{display:flex;align-items:center;gap:9px;flex:0 0 auto}
@@ -77,6 +79,21 @@ button{cursor:pointer;border:0;background:none}
 }
 .card.rr{transform:rotate(.55deg)}
 .card:first-of-type{margin-top:6px}
+/* 长按拖拽排序：拖动中的卡片抬起、其余卡片弹簧让位
+   注意 transform 由 JS 每帧写入（含原倾斜角），CSS 里不要再设 transform，否则互相覆盖 */
+.card.dragging{
+  box-shadow:0 16px 34px rgba(26,26,26,.2);
+  cursor:grabbing;
+  position:relative;
+}
+body.dragging-card{touch-action:none;user-select:none;-webkit-user-select:none}
+body.dragging-card #view .card{will-change:transform}
+.dragghost{
+  border-radius:26px;margin-bottom:20px;
+  border:1.6px dashed rgba(26,26,26,.22);
+  background:rgba(26,26,26,.03);
+  opacity:0;transition:transform .3s cubic-bezier(.22,1,.36,1),opacity .18s ease;
+}
 .card.excused{background:linear-gradient(142deg,#EDEDE8 0%,#F5F5F1 100%)}
 .wm{position:absolute;right:-4px;top:-10px;font-size:56px;opacity:.16;transform:rotate(13deg);pointer-events:none;z-index:0}
 .ctop{display:flex;align-items:flex-start;gap:12px;position:relative;z-index:1}
@@ -168,12 +185,22 @@ button{cursor:pointer;border:0;background:none}
 .legend2 i{width:14px;height:6px;border-radius:99px;display:block}
 
 /* ---------- 记录页 ---------- */
-.rhead{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.rhead{display:flex;align-items:center;gap:12px;margin-bottom:16px;position:relative}
 .rhead .rtitle{flex:1;text-align:center;font-size:19px}
-.rhead .ava{flex:0 0 auto}
 .fpills{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;margin-bottom:14px}
-.fpill{padding:7px 14px;border-radius:999px;background:var(--white);font-size:12.5px;white-space:nowrap;box-shadow:0 1px 4px rgba(26,26,26,.05)}
-.fpill.on{background:var(--soft);color:#fff;box-shadow:none}
+/* 选中项用真实布局放大（padding/字号），邻项才会真正被"挤开"让位；
+   用 transform:scale 只改绘制尺寸，邻项不会动 */
+.fpill{
+  padding:7px 14px;border-radius:999px;background:var(--white);font-size:12.5px;white-space:nowrap;
+  box-shadow:0 1px 4px rgba(26,26,26,.05);
+  transition:padding .3s cubic-bezier(.22,1,.36,1),font-size .3s cubic-bezier(.22,1,.36,1),
+             background .22s ease,color .22s ease,box-shadow .22s ease;
+}
+.fpill.on{
+  padding:9px 18px;font-size:13.5px;
+  background:var(--soft);color:#fff;box-shadow:none;
+}
+.fpico{font-size:1em;margin-right:4px;display:inline-block;vertical-align:-1px}
 .calrow{display:flex;align-items:center;gap:10px;margin-bottom:16px}
 .mpill{flex:1;display:flex;align-items:center;gap:9px;padding:7px 8px 7px 15px;border-radius:999px;background:var(--white);font-size:14px;font-variant-numeric:tabular-nums;min-width:0;box-shadow:0 2px 8px rgba(26,26,26,.05)}
 .mpill .mico{flex:0 0 auto;color:var(--muted);display:grid;place-items:center}
@@ -840,7 +867,7 @@ function habitCard(h, d, idx) {
   var cls = 'card' + (idx % 2 === 1 ? ' rr' : '') + (isExcused(r) ? ' excused' : '');
   var style = isExcused(r) ? '' : ' style="' + cardStyle(h) + '"';
   var goal = h.goalMinutes || 0;
-  var out = '<div class="' + cls + '"' + style + '>' +
+  var out = '<div class="' + cls + '"' + style + ' data-hid="' + h.id + '">' +
     '<div class="wm">' + h.icon + '</div>';
 
   /* ---- 上排 ---- */
@@ -970,11 +997,7 @@ function renderToday() {
   var now = new Date();
 
   var h = '';
-  h += '<div class="topRow"><div class="ava">坚</div>' +
-       '<div class="tmain"><h1 class="h1">今日</h1><p class="date">' + fmtDate(t) + '</p></div>' +
-       '<div class="topr">' +
-       '<button class="icb plus" data-act="newHabit">+</button>' +
-       '<button class="icb bell" data-act="noop">🔔</button></div></div>';
+  h += '<div class="topRow"><div class="tmain ctr"><h1 class="h1">今日</h1><p class="date">' + fmtDate(t) + '</p></div></div>';
   h += '<div class="sum"><span class="sum-n">' + done + '<i>/' + hs.length + '</i></span>' +
        '<span class="sum-l' + (all ? ' done' : '') + '">' +
        (all ? '今日全部完成 🎉' : '已完成 · ' + fmtMin(mins)) + '</span></div>';
@@ -1084,19 +1107,20 @@ function renderRecords() {
   if (!recView.y) { recView.y = td.getFullYear(); recView.m = td.getMonth(); }
   if (!recView.sel) recView.sel = t;
   var hs = activeHabits();
+  /* 「全部」视图已移除：筛选始终落在某个具体习惯上（默认第一个） */
+  if (!hs.length) recView.hid = null;
+  else if (recView.hid === 'all' || !hs.some(function (x) { return x.id === recView.hid; })) recView.hid = hs[0].id;
   var y = recView.y, m = recView.m;
   var isCurMonth = (y === td.getFullYear() && m === td.getMonth());
   var sel = recView.sel;
   if (sel && (parseISO(sel).getFullYear() !== y || parseISO(sel).getMonth() !== m)) sel = null;
 
-  var h = '<div class="rhead"><div class="ava">坚</div>' +
-    '<div class="rtitle">打卡记录</div>' +
-    '<button class="icb bell" data-act="noop">🔔</button></div>';
+  var h = '<div class="rhead"><div class="rtitle">打卡记录</div></div>';
 
   h += '<div class="fpills">' +
-    '<button class="fpill' + (recView.hid === 'all' ? ' on' : '') + '" data-act="pick" data-hid="all">全部</button>' +
     hs.map(function (x) {
-      return '<button class="fpill' + (recView.hid === x.id ? ' on' : '') + '" data-act="pick" data-hid="' + x.id + '">' + esc(x.name) + '</button>';
+      return '<button class="fpill' + (recView.hid === x.id ? ' on' : '') + '" data-act="pick" data-hid="' + x.id + '">' +
+        '<span class="fpico">' + x.icon + '</span>' + esc(x.name) + '</button>';
     }).join('') + '</div>';
 
   /* 日历本：标题（荧光笔下划线）+ 索引标签 */
@@ -1148,21 +1172,7 @@ function renderRecords() {
   h += '<div class="calwrap"><div class="calwk">' + ['一','二','三','四','五','六','日'].map(function (w) { return '<span>' + w + '</span>'; }).join('') +
        '</div><div class="cgrid">' + cells + '</div>';
 
-  if (recView.hid === 'all') {
-    var pending = [];
-    for (var pi = 7; pi >= 1; pi--) {
-      var pd = addDays(t, -pi);
-      if (parseISO(pd).getMonth() !== m || parseISO(pd).getFullYear() !== y) continue;
-      if (hs.some(function (x) { return !recOf(x.id, pd); })) pending.push(pd);
-    }
-    if (parseISO(t).getMonth() !== m || parseISO(t).getFullYear() !== y) pending = [];
-    h += '<div class="calhint">完成一项，日期里就多一道色带，从外到内依次是 ' +
-      hs.map(function (x) { return esc(x.name); }).join(' / ') + '<br>灰斜纹＝休息日 · 琥珀斜纹＝请假</div>';
-    if (pending.length) {
-      h += '<div class="calmore"><button class="linkbtn" data-act="batchBack">最近 7 天有 ' +
-        pending.length + ' 天没打满 · 一键补齐</button></div>';
-    }
-  } else {
+  {
     var hh = habitById(recView.hid);
     var lg = (hh && hh.type === 'abstain')
       ? [['#EDEDE8', '无记录'], ['#93C6EA', '坚持'], ['#E0A8A8', '破戒']]
@@ -1171,27 +1181,26 @@ function renderRecords() {
       return '<span><i style="background:' + x[0] + '"></i>' + x[1] + '</span>';
     }).join('') + '</div>';
   }
+  /* 一键补齐：原来只在「全部」视图里出现，现在「全部」已移除，改放在每个习惯视图下 */
+  {
+    var pending = [];
+    for (var pi = 7; pi >= 1; pi--) {
+      var pd = addDays(t, -pi);
+      if (parseISO(pd).getMonth() !== m || parseISO(pd).getFullYear() !== y) continue;
+      if (hs.some(function (x) { return !recOf(x.id, pd); })) pending.push(pd);
+    }
+    if (parseISO(t).getMonth() !== m || parseISO(t).getFullYear() !== y) pending = [];
+    if (pending.length) {
+      h += '<div class="calmore"><button class="linkbtn" data-act="batchBack">最近 7 天有 ' +
+        pending.length + ' 天没打满 · 一键补齐</button></div>';
+    }
+  }
   h += '</div>';
 
-  if (recView.hid !== 'all' && sel) h += dayDetail(sel);
+  if (sel) h += dayDetail(sel);
 
   /* 统计 */
-  if (recView.hid === 'all') {
-    var allDays = {}, allMin = 0, allExcused = 0;
-    hs.forEach(function (x) {
-      Object.keys(S.records[x.id] || {}).forEach(function (d) {
-        var r = S.records[x.id][d];
-        if (isExcused(r)) allExcused++; else allDays[d] = 1;
-      });
-      allMin += totalMinutes(x);
-    });
-    h += '<div class="statcard"><div class="srow">' +
-      '<div><b>' + Object.keys(allDays).length + '</b><span>累计打卡天数</span></div>' +
-      '<div><b>' + hoursText(allMin) + '<em> 小时</em></b><span>累计时长</span></div>' +
-      '</div><div class="srow2"><span>' + hs.map(function (x) {
-        return esc(x.name) + ' <b>' + streak(x) + ' 天</b>';
-      }).join(' · ') + '</span></div></div>';
-  } else {
+  {
     var hb = habitById(recView.hid);
     var ms = monthStats(hb, y, m);
     h += '<div class="statcard"><div class="srow">' +
@@ -1207,24 +1216,7 @@ function renderRecords() {
       '</div></div>';
   }
 
-  if (recView.hid === 'all') {
-    var md = 0, mm = 0, mexc = 0;
-    for (var dd = 1; dd <= days; dd++) {
-      var is2 = isoOf(new Date(y, m, dd));
-      var anyDone = false;
-      hs.forEach(function (x) {
-        var r = recOf(x.id, is2);
-        if (!r) return;
-        if (isExcused(r)) mexc++;
-        else { anyDone = true; mm += (r.minutes || 0); }
-      });
-      if (anyDone) md++;
-    }
-    var elapsed = isCurMonth ? td.getDate() : days;
-    var base = Math.max(1, elapsed - mexc);
-    h += '<div class="msum">本月打卡 <b>' + md + '</b> 天 · 共 <b>' + fmtMin(mm) + '</b> · 完成率 <b>' +
-         Math.round(md / base * 100) + '%</b>' + (mexc ? ' · 休息/请假 ' + mexc + ' 天' : '') + '</div>';
-  } else {
+  {
     var hb2 = habitById(recView.hid);
     var ms2 = monthStats(hb2, y, m);
     h += '<div class="msum">' + (hb2.type === 'abstain'
@@ -1259,9 +1251,9 @@ function totalRecordDays() {
 }
 function renderMine() {
   var hs = activeHabits();
-  var h = '<h1 class="h1" style="margin-bottom:16px">我的</h1>';
+  var h = '<h1 class="h1" style="margin-bottom:16px;text-align:center">我的</h1>';
   h += '<div class="sect">习惯管理</div><div class="list">';
-  hs.forEach(function (x, i) {
+  hs.forEach(function (x) {
     var p = PALETTE[x.color] || PALETTE.green;
     var extras = [];
     if (x.allowRest) extras.push('可休息日');
@@ -1271,13 +1263,10 @@ function renderMine() {
       '<span class="lmain"><span class="lname">' + esc(x.name) + '</span>' +
       '<span class="lsub">' + (x.type === 'check' ? '完成型 · 目标 ' + (x.goalMinutes || 0) + ' 分钟' : '戒断型 · 无目标') +
       (extras.length ? ' · ' + extras.join('/') : '') + '</span></span>' +
-      '<span class="lup">' +
-      '<button data-act="up" data-hid="' + x.id + '"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
-      '<button data-act="down" data-hid="' + x.id + '"' + (i === hs.length - 1 ? ' disabled' : '') + '>↓</button>' +
-      '</span></div>';
+      '<span class="larr">›</span></div>';
   });
-  h += '</div><button class="addbtn" data-act="newHabit">+ 添加习惯</button>';
-  if (hs.length > 5) h += '<div class="foot" style="margin-top:10px">习惯太多会降低坚持率，建议聚焦 3–5 个</div>';
+  h += '</div><button class="addbtn" id="addHabitBtn" data-act="newHabit">+ 添加习惯</button>';
+  if (hs.length > 5) h += '<div class="foot" style="margin-top:10px">习惯太多会降低坚持率，建议聚焦 3–5 个<br>顺序在今日页长按卡片拖动调整</div>';
 
   h += '<div class="sect">数据</div><div class="list">' +
     '<button class="lrow" data-act="export"><span class="lmain"><span class="lname">导出数据</span>' +
@@ -1588,6 +1577,44 @@ function freeColor() {
   for (var i = 0; i < keys.length; i++) if (used.indexOf(keys[i]) < 0) return keys[i];
   return keys[S.habits.length % keys.length];
 }
+/* 全屏页从按钮形变展开：clip-path 从按钮矩形扩到整屏（round 圆角同步收放） */
+function morphPageIn(srcEl) {
+  var page = $('#pageRoot');
+  var sr = sourceRect(srcEl);
+  if (!page || !page.animate || !sr) return;
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var from = 'inset(' + Math.round(sr.top) + 'px ' + Math.round(vw - sr.right) + 'px ' +
+             Math.round(vh - sr.bottom) + 'px ' + Math.round(sr.left) + 'px round 999px)';
+  var to = 'inset(0px 0px 0px 0px round 0px)';
+  page.style.visibility = 'visible';
+  page.animate([
+    { clipPath: from, opacity: .55 },
+    { clipPath: to, opacity: 1 }
+  ], { duration: 520, easing: MORPH_EASE, fill: 'both' });
+  var inner = page.querySelector('.page-in');
+  if (inner) inner.animate([
+    { opacity: 0, transform: 'translateY(16px)' },
+    { opacity: 0, transform: 'translateY(16px)', offset: .55 },
+    { opacity: 1, transform: 'translateY(0)' }
+  ], { duration: 520, easing: 'ease-out', fill: 'both' });
+}
+function morphPageOut(srcEl, done) {
+  var page = $('#pageRoot');
+  var sr = sourceRect(srcEl);
+  if (!page || !page.animate || !sr) { if (done) done(); return; }
+  var vw = window.innerWidth, vh = window.innerHeight;
+  var to = 'inset(' + Math.round(sr.top) + 'px ' + Math.round(vw - sr.right) + 'px ' +
+           Math.round(vh - sr.bottom) + 'px ' + Math.round(sr.left) + 'px round 999px)';
+  var main = page.animate([
+    { clipPath: 'inset(0px 0px 0px 0px round 0px)', opacity: 1 },
+    { clipPath: to, opacity: .5 }
+  ], { duration: 380, easing: 'cubic-bezier(.4,0,.7,.3)', fill: 'both' });
+  var inner = page.querySelector('.page-in');
+  if (inner) inner.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease-in', fill: 'both' });
+  var finish = function () { if (done) done(); };
+  if (main.finished && main.finished.then) main.finished.then(finish).catch(finish);
+  else main.onfinish = finish;
+}
 function openEditor(id) {
   var isNew = !id;
   if (isNew) editor = { id: null, name: '', icon: '📖', color: freeColor(), type: 'check', goal: 30, allowRest: false, allowLeave: false };
@@ -1600,8 +1627,18 @@ function openEditor(id) {
   }
   drawEditor();
   $('#pageRoot').classList.add('show');
+  /* 记住从哪个按钮长出来的，收回时原路返回。
+     __lastTap 靠 pointerdown 记录；键盘/程序化触发时兜底找「添加习惯」按钮 */
+  editor.__src = window.__lastTap || $('#addHabitBtn') || null;
+  morphPageIn(editor.__src);
 }
-function closeEditor() { $('#pageRoot').classList.remove('show'); }
+function closeEditor() {
+  morphPageOut(editor.__src, function () {
+    $('#pageRoot').classList.remove('show');
+    var p = $('#pageRoot');
+    if (p) { p.style.visibility = ''; p.style.clipPath = ''; }
+  });
+}
 function drawEditor() {
   var isNew = !editor.id;
   var html = '<div class="page-in">' +
@@ -1754,6 +1791,196 @@ function clearAll() {
 }
 
 /* ============================================================
+   标签让位（FLIP）：选中项用真实布局放大（padding/字号），邻项被平滑挤开。
+   render() 会重建 DOM，所以用标准 FLIP：
+     ① 切换前记录每个标签的位置 ② 重渲染（选中态已变，布局真的变了）
+     ③ 给新标签设反向位移 ④ 强制回流后过渡回 0 —— 视觉上就是"平滑让位"
+   用 data-hid 对应标签身份，不用下标。
+   ============================================================ */
+function switchPill(hid) {
+  var oldRow = $('.fpills');
+  var before = {};
+  var oldScroll = oldRow ? oldRow.scrollLeft : 0;
+  if (oldRow) {
+    Array.prototype.slice.call(oldRow.querySelectorAll('.fpill')).forEach(function (p) {
+      var r = p.getBoundingClientRect();
+      before[p.dataset.hid] = { left: r.left, top: r.top };
+    });
+  }
+  recView.hid = hid;
+  var keepY = window.scrollY;
+  render();
+  var newRow = $('.fpills');
+  if (newRow) {
+    newRow.scrollLeft = oldScroll;
+    Array.prototype.slice.call(newRow.querySelectorAll('.fpill')).forEach(function (p) {
+      var b = before[p.dataset.hid];
+      if (!b) return;
+      var r = p.getBoundingClientRect();
+      var dx = b.left - r.left, dy = b.top - r.top;
+      if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) return;
+      /* 用 WAAPI 而不是 CSS 过渡：刚插入的元素上 CSS 过渡不一定触发 */
+      p.style.transform = '';
+      p.animate([
+        { transform: 'translate(' + dx + 'px,' + dy + 'px)' },
+        { transform: 'translate(0,0)' }
+      ], { duration: 320, easing: 'cubic-bezier(.22,1,.36,1)' });
+    });
+  }
+  window.scrollTo(0, keepY);
+}
+
+/* ============================================================
+   拖拽排序（今日页卡片）：长按拿起 → 跟手 → 其余卡片弹簧让位 → 松手提交
+   ============================================================ */
+var drag = {
+  el: null, hid: null, active: false, holdTimer: null,
+  startY: 0, startX: 0, ptrY: 0, insertIndex: 0, order: [], orderAtStart: [],
+  rects: [], pitch: 0, top0: 0, ghost: null, ghostBase: 0, tilt: '-0.5deg', origIndex: 0
+};
+var LONGPRESS_MS = 320;
+var LONGPRESS_MOVE = 8;      /* 长按判定前允许的抖动 */
+var DRAG_PITCH_FALLBACK = 20;
+
+function cardsInView() {
+  return Array.prototype.slice.call(document.querySelectorAll('#view .card[data-hid]'));
+}
+function clearHold() {
+  if (drag.holdTimer) { clearTimeout(drag.holdTimer); drag.holdTimer = null; }
+}
+/* 取消一切进行中的长按/拖拽（全局兜底，避免幽灵状态） */
+function cancelDrag(restore) {
+  clearHold();
+  if (!drag.el) { drag.active = false; return; }
+  var el = drag.el;
+  el.classList.remove('dragging');
+  el.style.zIndex = '';
+  el.style.transition = '';
+  el.style.transform = '';
+  if (drag.ghost && drag.ghost.parentNode) { drag.ghost.remove(); }
+  drag.ghost = null;
+  document.body.classList.remove('dragging-card');
+  drag.el = null; drag.hid = null; drag.active = false;
+  if (restore) render();
+}
+/* 每帧重算落点并驱动其余卡片弹簧让位（全部用视口坐标） */
+function dragMove(ptrY) {
+  var others = cardsInView().filter(function (c) { return c.dataset.hid !== drag.hid; });
+  var idx = Math.round((ptrY - drag.top0) / drag.pitch);
+  if (idx < 0) idx = 0;
+  if (idx > drag.order.length - 1) idx = drag.order.length - 1;
+  drag.insertIndex = idx;
+  /* 拖动项跟手（保留原倾斜角） */
+  var dy = ptrY - drag.startY;
+  drag.el.style.transform = 'translate3d(0,' + dy + 'px,0) rotate(' + drag.tilt + ') scale(1.03)';
+  /* 其余卡片让位：只有"原位置"与"落点"之间的那些才动，且是往空槽方向移动
+     from = 拖动项原始下标，idx = 落点下标：
+       idx > from → 中间那些（from<i<=idx）整体上移一格
+       idx < from → 中间那些（idx<=i<from）整体下移一格
+     这样预览几何和松手后的提交顺序一致（拖动项最终落在 idx） */
+  var from = drag.origIndex;
+  others.forEach(function (c) {
+    var i = drag.order.indexOf(c.dataset.hid);
+    if (i < 0) return;
+    var slots = 0;
+    if (idx > from && i > from && i <= idx) slots = -1;
+    else if (idx < from && i >= idx && i < from) slots = 1;
+    var ty = slots * drag.pitch;
+    var tilt = c.classList.contains('rr') ? '.55deg' : '-.5deg';
+    c.style.transition = 'transform .3s cubic-bezier(.22,1,.36,1)';
+    c.style.transform = ty
+      ? 'translate3d(0,' + ty + 'px,0) rotate(' + tilt + ')'
+      : 'translate3d(0,0,0) rotate(' + tilt + ')';
+  });
+  /* 空槽虚线：移到落点对应的槽位 */
+  if (drag.ghost) {
+    drag.ghost.style.transform = 'translate3d(0,' + ((idx - from) * drag.pitch) + 'px,0)';
+    drag.ghost.style.opacity = '1';
+  }
+}
+function commitDrag() {
+  var order = drag.order.slice();
+  var from = order.indexOf(drag.hid);
+  if (from < 0) { cancelDrag(false); return; }
+  order.splice(from, 1);
+  order.splice(drag.insertIndex, 0, drag.hid);
+  order.forEach(function (hid, i) {
+    var h = habitById(hid);
+    if (h) h.sort = i;
+  });
+  save();
+  var el = drag.el;
+  /* 先清掉临时样式再重渲染，避免残留 */
+  if (el) { el.style.transform = ''; el.style.transition = ''; el.style.zIndex = ''; }
+  cancelDrag(false);
+  render();
+  toast('顺序已保存');
+}
+document.addEventListener('pointerdown', function (e) {
+  if (e.button != null && e.button !== 0) return;
+  var card = e.target.closest ? e.target.closest('#view .card[data-hid]') : null;
+  if (!card) return;
+  if (e.target.closest('button')) return;       /* 卡片里的按钮不触发拖拽 */
+  var hs = activeHabits();
+  if (hs.length < 2) return;
+  drag.el = card; drag.hid = card.dataset.hid;
+  drag.tilt = card.classList.contains('rr') ? '.55deg' : '-.5deg';
+  drag.startY = e.clientY; drag.startX = e.clientX; drag.ptrY = e.clientY;
+  drag.order = hs.map(function (h) { return h.id; });
+  drag.orderAtStart = drag.order.slice();
+  drag.origIndex = drag.order.indexOf(drag.hid);
+  drag.active = false;
+  clearHold();
+  drag.holdTimer = setTimeout(function () {
+    drag.holdTimer = null;
+    drag.active = true;
+    var cards = cardsInView();
+    if (cards.length < 2) { cancelDrag(false); return; }
+    drag.rects = cards.map(function (c) { return c.getBoundingClientRect(); });
+    drag.top0 = drag.rects[0].top;
+    drag.pitch = (drag.rects.length > 1)
+      ? (drag.rects[drag.rects.length - 1].top - drag.rects[0].top) / (drag.rects.length - 1)
+      : (card.offsetHeight + DRAG_PITCH_FALLBACK);
+    if (drag.pitch < 20) drag.pitch = card.offsetHeight + DRAG_PITCH_FALLBACK;
+    var r = card.getBoundingClientRect();
+    card.style.zIndex = '30';
+    card.style.transition = 'none';
+    card.classList.add('dragging');
+    document.body.classList.add('dragging-card');
+    /* 空槽虚线（插在卡片原位置） */
+    var g = document.createElement('div');
+    g.className = 'dragghost';
+    g.style.height = r.height + 'px';
+    card.parentNode.insertBefore(g, card);
+    drag.ghost = g;
+    drag.insertIndex = drag.origIndex;
+    if (navigator.vibrate) { try { navigator.vibrate(12); } catch (err) {} }
+  }, LONGPRESS_MS);
+}, true);
+document.addEventListener('pointermove', function (e) {
+  if (!drag.el) return;
+  if (!drag.active) {
+    /* 长按判定前移太多 → 视为滚动，取消 */
+    if (Math.abs(e.clientY - drag.startY) > LONGPRESS_MOVE || Math.abs(e.clientX - drag.startX) > LONGPRESS_MOVE) {
+      cancelDrag(false);
+    }
+    return;
+  }
+  if (e.cancelable) e.preventDefault();
+  drag.ptrY = e.clientY;
+  dragMove(e.clientY);
+}, { passive: false, capture: true });
+document.addEventListener('pointerup', function () {
+  if (!drag.el) return;
+  if (drag.active) commitDrag();
+  else cancelDrag(false);
+}, true);
+document.addEventListener('pointercancel', function () {
+  if (drag.el) cancelDrag(false);
+}, true);
+window.addEventListener('blur', function () { if (drag.el) cancelDrag(true); });
+
+/* ============================================================
    渲染与事件
    ============================================================ */
 var tab = 'today';
@@ -1843,7 +2070,11 @@ $('#view').addEventListener('click', function (e) {
       }, true);
     return;
   }
-  if (act === 'pick') { recView.hid = hid; render(); return; }
+  if (act === 'pick') {
+    if (recView.hid === hid) return;
+    switchPill(hid);
+    return;
+  }
   if (act === 'prev') { recView.m--; if (recView.m < 0) { recView.m = 11; recView.y--; } render(); return; }
   if (act === 'next') {
     var td2 = new Date();
@@ -1894,15 +2125,6 @@ $('#view').addEventListener('click', function (e) {
   }
   if (act === 'batchBack') { batchBackfill(); return; }
   if (act === 'editHabit') { openEditor(hid); return; }
-  if (act === 'up' || act === 'down') {
-    var hs = activeHabits();
-    var i = hs.map(function (x) { return x.id; }).indexOf(hid);
-    var j = act === 'up' ? i - 1 : i + 1;
-    if (j < 0 || j >= hs.length) return;
-    var a = hs[i], b = hs[j];
-    var tmp = a.sort; a.sort = b.sort; b.sort = tmp;
-    save(); render(); return;
-  }
   if (act === 'export') { exportData(); return; }
   if (act === 'import') { importData(); return; }
   if (act === 'clear') { clearAll(); return; }
