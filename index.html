@@ -28,6 +28,18 @@ html{-webkit-text-size-adjust:100%}
 /* 禁止双指捏合缩放。viewport 的 user-scalable=no 在 iOS 上会被忽略，
    touch-action 才是真正生效的那层；双击放大交给 touch-action:manipulation。 */
 html,body{touch-action:pan-x pan-y;overscroll-behavior:none}
+/* 禁掉长按选中文字 / 长按弹出「拷贝·查询」气泡 / 长按元素被拎起来放大。
+   这三样是 Safari 的行为，出现在 App 里就会「一看就是网页」。
+   -webkit-touch-callout 管的正是气泡和"拎起来"，缺它光禁 user-select 不够。
+   输入框必须单独开回来（见下方 input,textarea 那条）。 */
+html,body{
+  -webkit-user-select:none;user-select:none;
+  -webkit-touch-callout:none;
+}
+input,textarea,select,[contenteditable]{
+  -webkit-user-select:text;user-select:text;
+  -webkit-touch-callout:default;
+}
 body{
   margin:0;background:radial-gradient(125% 58% at 50% 0%,#FCFCFA 0%,#F6F6F4 64%);
   background-attachment:fixed;
