@@ -164,6 +164,7 @@ body.dragging-card{touch-action:none;user-select:none;-webkit-user-select:none}
 .dots i{width:6px;height:6px;border-radius:50%;background:rgba(26,26,26,.18);display:block}
 .dots i.used{background:#9C8FD0}
 .dots i.usedL{background:#C79A55}
+.dots i.usedR{background:#D9736F}
 
 /* ---------- 统计卡 ---------- */
 .sect{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);margin:20px 2px 11px}
@@ -524,6 +525,8 @@ function weekStartOf(iso) {
    ============================================================ */
 var KEY = 'jianchi-v1';
 var QUOTA_MAX = 3;   /* 每周休息日 / 请假各最多 3 天 */
+var RELAPSE_FREE = 1;         /* 每自然月允许 1 次破戒不重算连续；从第 2 次起从破戒日重新起算 */
+var RELAPSE_CAL = '#D9736F';  /* 日历上「破戒」的填充红 */
 var PALETTE = {
   green:  { bg: '#DDEBCB', c2: '#EDF5E1', deep: '#8FB55C', ring: '#BEDD94', cal: '#6E9440' },
   purple: { bg: '#DED8EF', c2: '#EBE8F7', deep: '#9C8FD0', ring: '#BBA8E8', cal: '#7A6BB8' },
@@ -584,10 +587,33 @@ function recStatus(h, r) {
   return (r.status === 'rest' || r.status === 'leave') ? r.status : 'done';
 }
 function isExcused(r) { return !!r && (r.status === 'rest' || r.status === 'leave'); }
+
+/* ---------- 破戒额度（戒断型） ----------   每自然月前 RELAPSE_FREE 次破戒视为正常生理需求，不算中断连续；
+   从第 RELAPSE_FREE+1 次起，连续天数从破戒当天重新起算。
+   只影响「连续/最长连续」的算法，绝不删改任何历史记录。 */
+function isRelapse(r) { return !!r && r.status === 'relapse'; }
+/* 本月已破戒次数 */
+function relapseUsed(hid) {
+  var ym = todayISO().slice(0, 7);
+  var log = S.records[hid] || {}, n = 0;
+  for (var d in log) if (d.slice(0, 7) === ym && isRelapse(log[d])) n++;
+  return n;
+}
+/* 这一天是否是「计中断」的破戒（本月超出免费额度的那几次）
+   注意：按当月破戒日期升序的序号判定，删掉靠前的一次会让后面的序号前移 */
+function isBreakingRelapse(hid, iso) {
+  var ym = iso.slice(0, 7);
+  var log = S.records[hid] || {};
+  var dates = Object.keys(log).filter(function (d) {
+    return d.slice(0, 7) === ym && isRelapse(log[d]);
+  }).sort();
+  return dates.indexOf(iso) >= RELAPSE_FREE;
+}
+
 function isDone(h, d) {
   var r = recOf(h.id, d);
   if (!r) return false;
-  if (h.type === 'abstain') return r.status === 'kept';
+  if (h.type === 'abstain') return r.status === 'kept' || !isBreakingRelapse(h.id, d);
   return !isExcused(r);
 }
 
@@ -596,10 +622,13 @@ function streak(h) {
   var t = todayISO();
   if (h.type === 'abstain') {
     var log = S.records[h.id] || {};
-    if (log[t] && log[t].status === 'relapse') return 0;
-    var last = null;
-    for (var d in log) if (log[d].status === 'relapse' && (!last || d > last)) last = d;
-    var start = last ? addDays(last, 1) : (h.createdAt || t);
+    /* 只统计「计中断」的破戒：每月第 1 次破戒不算中断，第 2 次起才重新起算 */
+    var breaks = Object.keys(log).filter(function (d) {
+      return isRelapse(log[d]) && isBreakingRelapse(h.id, d);
+    }).sort();
+    var last = breaks.length ? breaks[breaks.length - 1] : null;
+    /* 首次破戒不中断；超额度的那次从「破戒日当天」重新起算（当天算第 1 天） */
+    var start = last ? last : (h.createdAt || t);
     if (start > t) return 0;
     return diffDays(start, t) + 1;
   }
@@ -619,13 +648,16 @@ function bestStreak(h) {
   var dates = Object.keys(log).sort();
   if (!dates.length) return 0;
   if (h.type === 'abstain') {
-    var rel = dates.filter(function (d) { return log[d].status === 'relapse'; });
+    /* 只有「计中断」的破戒才切分段；每月第 1 次破戒不影响最长连续 */
+    var rel = dates.filter(function (d) {
+      return isRelapse(log[d]) && isBreakingRelapse(h.id, d);
+    });
     var start = h.createdAt || todayISO();
     var best = 0, prev = start;
     rel.forEach(function (d) {
-      var len = diffDays(prev, d);
+      var len = diffDays(prev, d) + 1;      /* 到破戒日当天为止（含当天） */
       if (len > best) best = len;
-      prev = addDays(d, 1);
+      prev = d;                             /* 下一段从破戒日当天起算 */
     });
     if (prev <= todayISO()) {
       var len2 = diffDays(prev, todayISO()) + 1;
@@ -859,8 +891,17 @@ function confirmDlg(title, body, okText, onOk, danger) {
 }
 function quotaDots(used, kind) {
   var h = '';
+  var cls = kind === 'leave' ? 'usedL' : (kind === 'relapse' ? 'usedR' : 'used');
   for (var i = 0; i < QUOTA_MAX; i++) {
-    h += '<i class="' + (i < used ? (kind === 'leave' ? 'usedL' : 'used') : '') + '"></i>';
+    h += '<i class="' + (i < used ? cls : '') + '"></i>';
+  }
+  return '<span class="dots">' + h + '</span>';
+}
+/* 破戒额度的小圆点（只有 RELAPSE_FREE 个） */
+function relapseDots(used) {
+  var h = '';
+  for (var i = 0; i < RELAPSE_FREE; i++) {
+    h += '<i class="' + (i < used ? 'usedR' : '') + '"></i>';
   }
   return '<span class="dots">' + h + '</span>';
 }
@@ -888,7 +929,10 @@ function habitCard(h, d, idx) {
   var right = '', meta = '', extra = '', wkCls = '';
   if (h.type === 'abstain') {
     right = '<div class="bignum">' + st + '<em> 天</em></div>';
-    meta = '最长 ' + bestStreak(h) + ' 天 · 累计破戒 ' + relapseCount(h) + ' 次';
+    var ru = relapseUsed(h.id);
+    var over = ru > RELAPSE_FREE;
+    meta = '最长 ' + bestStreak(h) + ' 天 · 累计破戒 ' + relapseCount(h) + ' 次 · ' +
+      (over ? '本月已用满 ' + RELAPSE_FREE + ' 次免费额度' : '本月已用 ' + ru + '/' + RELAPSE_FREE + ' 次免费额度');
     wkCls = 'b';
   } else if (status === 'rest') {
     right = '<div class="bignum">' + st + '<em> 天</em></div>';
@@ -936,14 +980,21 @@ function habitCard(h, d, idx) {
   if (h.type === 'abstain') {
     if (!r) {
       out += '<div class="btnrow"><button class="wide" data-act="keep" data-hid="' + h.id + '" data-date="' + d + '">坚持住了</button>' +
-        '<button data-act="reset" data-hid="' + h.id + '" data-date="' + d + '">重新开始</button></div>';
+        '<button data-act="reset" data-hid="' + h.id + '" data-date="' + d + '">破戒了</button></div>';
+      out += '<div class="quotahint">本月免费额度 ' +
+        (relapseUsed(h.id) >= RELAPSE_FREE ? '已用满' : relapseDots(relapseUsed(h.id)) + ' ' + relapseUsed(h.id) + ' / ' + RELAPSE_FREE) +
+        ' · 首次破戒不计中断，超出后从破戒日起重新计算</div>';
     } else if (status === 'kept') {
       out += '<div class="btnrow pad"><button data-act="note" data-hid="' + h.id + '" data-date="' + d + '">改备注</button>' +
         '<button data-act="undo" data-hid="' + h.id + '" data-date="' + d + '">撤销</button></div>' +
         '<div class="stamp blue">坚持<br>' + st + '天</div>';
     } else {
-      out += '<div class="btnrow"><button data-act="undo" data-hid="' + h.id + '" data-date="' + d + '">撤销</button></div>' +
-        '<div class="stamp gray">重新<br>开始</div>';
+      /* 破戒日：允许直接改成「坚持住了」，也能撤销 */
+      var breaking = isBreakingRelapse(h.id, d);
+      out += '<div class="btnrow"><button data-act="keep" data-hid="' + h.id + '" data-date="' + d + '">其实坚持住了</button>' +
+        '<button data-act="undo" data-hid="' + h.id + '" data-date="' + d + '">撤销</button></div>' +
+        '<div class="stamp ' + (breaking ? 'gray' : 'amber') + '">' +
+        (breaking ? '连续<br>已重算' : '破戒<br>不中断') + '</div>';
     }
   } else if (status === 'rest') {
     var ru = quotaUsed(h.id, 'rest');
@@ -1052,9 +1103,14 @@ function cellInfo(hid, iso) {
   if (!r) return { slots: [], total: 0, back: false, striped: null, done: false };
   var back = !!r.backfilled;
   var st = recStatus(h, r);
-  if (st === 'rest') return { slots: [], total: 0, back: back, striped: 'rest', done: false };
-  if (st === 'leave') return { slots: [], total: 0, back: back, striped: 'leave', done: false };
-  if (st === 'relapse') return { slots: [], total: 0, back: back, striped: 'relapse', done: false };
+  if (st === 'rest') return { slots: [], total: 0, back: back, striped: 'rest', done: false, tone: null };
+  if (st === 'leave') return { slots: [], total: 0, back: back, striped: 'leave', done: false, tone: null };
+  /* 破戒：整格红填充（显眼）。超出月度额度的用深一档红以示区别 */
+  if (st === 'relapse') {
+    var breaking = isBreakingRelapse(h.id, iso);
+    return { slots: [], total: 0, back: back, striped: null, done: true,
+             tone: breaking ? '#C0504C' : RELAPSE_CAL, relapse: true };
+  }
   /* 打卡成功（戒断型的「坚持住了」也算）→ 给一个显眼的实心色块 */
   var tone = (PALETTE[h.color] || PALETTE.green).cal;
   return { slots: [], total: 0, back: back, striped: null, done: true, tone: tone };
@@ -1068,7 +1124,8 @@ function dayDetail(iso) {
   var status = recStatus(h, r);
   var sub, act = '';
   if (h.type === 'abstain') {
-    sub = r ? (status === 'kept' ? '坚持住了' : '重新开始了') : '未记录';
+    sub = r ? (status === 'kept' ? '坚持住了'
+      : (isBreakingRelapse(h.id, iso) ? '破戒 · 连续已重算' : '破戒 · 连续不中断')) : '未记录';
   } else if (status === 'rest') {
     sub = '休息日 · 连续不中断';
   } else if (status === 'leave') {
@@ -1081,9 +1138,14 @@ function dayDetail(iso) {
     act = '<button data-act="dayEdit" data-hid="' + h.id + '" data-date="' + iso + '">改</button>' +
           '<button data-act="dayDel" data-hid="' + h.id + '" data-date="' + iso + '">删</button>';
   } else if (canBack) {
-    act = '<button data-act="dayBack" data-hid="' + h.id + '" data-date="' + iso + '">补打</button>';
-    if (h.allowRest) act += '<button data-act="dayRest" data-hid="' + h.id + '" data-date="' + iso + '">休息</button>';
-    if (h.allowLeave) act += '<button data-act="dayLeave" data-hid="' + h.id + '" data-date="' + iso + '">请假</button>';
+    if (h.type === 'abstain') {
+      act = '<button data-act="dayKeep" data-hid="' + h.id + '" data-date="' + iso + '">坚持</button>' +
+            '<button data-act="dayRelapse" data-hid="' + h.id + '" data-date="' + iso + '">破戒</button>';
+    } else {
+      act = '<button data-act="dayBack" data-hid="' + h.id + '" data-date="' + iso + '">补打</button>';
+      if (h.allowRest) act += '<button data-act="dayRest" data-hid="' + h.id + '" data-date="' + iso + '">休息</button>';
+      if (h.allowLeave) act += '<button data-act="dayLeave" data-hid="' + h.id + '" data-date="' + iso + '">请假</button>';
+    }
   } else {
     act = '<button class="off" disabled>—</button>';
   }
@@ -1143,7 +1205,7 @@ function renderRecords() {
     /* 打卡成功：整格实心色块（比细环显眼得多），补打的再加右上角小三角 */
     var fill = '';
     if (ci.done && ci.tone) {
-      cls += ' done';
+      cls += ' done' + (ci.relapse ? ' relapse' : '');
       fill = '<i class="cfill" style="background:' + ci.tone + '"></i>';
     }
     cells += '<button class="' + cls + '" data-act="day" data-date="' + iso + '"' +
@@ -1157,7 +1219,7 @@ function renderRecords() {
     var hh = habitById(recView.hid);
     var doneColor = (PALETTE[(hh && hh.color) || 'green'] || PALETTE.green).cal;
     var lg = (hh && hh.type === 'abstain')
-      ? [[doneColor, '坚持住了'], ['#E0A8A8', '重新开始'], ['#EDEDE8', '无记录']]
+      ? [['#93C6EA', '坚持住了'], [RELAPSE_CAL, '破戒（不中断）'], ['#C0504C', '破戒（连续重算）'], ['#EDEDE8', '无记录']]
       : [[doneColor, '已打卡'], ['repeating-linear-gradient(48deg,#8E8E86 0 3px,#C4C4BC 3px 6px)', '休息日'], ['repeating-linear-gradient(48deg,#C79A55 0 3px,#EBD9B8 3px 6px)', '请假'], ['#EDEDE8', '无记录']];
     h += '<div class="legend2">' + lg.map(function (x) {
       return '<span><i style="background:' + x[0] + '"></i>' + x[1] + '</span>';
@@ -2016,12 +2078,21 @@ $('#view').addEventListener('click', function (e) {
   if (act === 'reset') {
     var hr2 = habitById(hid);
     var cur = streak(hr2), best = bestStreak(hr2);
-    confirmDlg('确定要重新开始吗？',
-      '当前连续 ' + cur + ' 天将归零。历史最长记录（' + best + ' 天）和累计坚持天数会保留。',
-      '确定重新开始', function () {
+    var used = relapseUsed(hid);
+    /* 本月第一次破戒不算中断；超出额度才从破戒日重新起算 */
+    var willBreak = used >= RELAPSE_FREE;
+    var body = willBreak
+      ? '本月免费额度（' + RELAPSE_FREE + ' 次）已用完，这次破戒后连续天数会从今天重新计算。' +
+        '历史最长记录（' + best + ' 天）和日历上已打卡的记录都会保留，不会被清空。'
+      : '本月第 ' + (used + 1) + ' 次破戒，属于正常生理需求，不会中断连续天数（当前 ' + cur + ' 天）。' +
+        '历史记录全部保留，日历上这天会标成红色。';
+    confirmDlg('今天破戒了？', body,
+      willBreak ? '确定（连续重算）' : '确定',
+      function () {
         setRec(hid, date, { status: 'relapse', note: '', backfilled: false, at: new Date().toISOString() });
-        save(); render(); toast('已重新开始，明天继续');
-      }, true);
+        save(); render();
+        toast(willBreak ? '已记录破戒 · 连续从今天重新计算' : '已记录破戒 · 连续不受影响');
+      }, willBreak);
     return;
   }
   if (act === 'pick') {
@@ -2063,6 +2134,17 @@ $('#view').addEventListener('click', function (e) {
       setRec(hid, date, { status: 'kept', note: '', backfilled: true, at: new Date().toISOString() });
       save(); render(); toast('已补打 ' + fmtDateShort(date));
     } else openCheckin(hid, date, 'backfill');
+    return;
+  }
+  if (act === 'dayKeep') {
+    setRec(hid, date, { status: 'kept', note: '', backfilled: true, at: new Date().toISOString() });
+    save(); render(); toast('已记为坚持 ' + fmtDateShort(date));
+    return;
+  }
+  if (act === 'dayRelapse') {
+    setRec(hid, date, { status: 'relapse', note: '', backfilled: true, at: new Date().toISOString() });
+    save(); render();
+    toast(isBreakingRelapse(hid, date) ? '已补记破戒 · 连续从这天重算' : '已补记破戒 · 连续不中断');
     return;
   }
   if (act === 'dayRest') {
