@@ -255,13 +255,22 @@ body.dragging-card{touch-action:none;user-select:none;-webkit-user-select:none}
 .ccell.sel{box-shadow:inset 0 0 0 2px var(--ink)}
 .ccell.today.sel{box-shadow:inset 0 0 0 2px var(--ink)}
 .ccell.we .cn{color:#C9907C}
-.ccell.today .cn{color:#4E6A22}
 .ccell .cn{position:relative;z-index:2}
-.crings{position:absolute;inset:0;display:block;pointer-events:none;z-index:1}
-.crings i{position:absolute;border-radius:50%;inset:calc(var(--ri) * var(--step) + var(--pad))}
-.crings i.rest{background:repeating-linear-gradient(48deg,#8E8E86 0 2.5px,#C4C4BC 2.5px 5px)}
-.crings i.leave{background:repeating-linear-gradient(48deg,#C79A55 0 2.5px,#EBD9B8 2.5px 5px)}
-.crings .ccore{position:absolute;border-radius:50%;inset:calc(var(--ci) * var(--step) + var(--pad));background:#FDFCF8}
+/* 打卡成功的日期：整格实心色块 + 白字（显眼） */
+.ccell .cfill{
+  position:absolute;inset:0;border-radius:9px;display:block;
+  z-index:1;box-shadow:0 1px 3px rgba(26,26,26,.16);
+}
+.ccell.done .cn{color:#fff}
+.ccell.done.we .cn{color:#fff}
+.ccell.done.today{background:rgba(174,203,82,.16)}
+/* 补打标记：右上角小三角，一眼能看出是补的 */
+.ccell .bk{
+  position:absolute;top:0;right:0;width:0;height:0;z-index:3;
+  border-top:11px solid rgba(26,26,26,.55);
+  border-left:11px solid transparent;
+  border-top-right-radius:9px;
+}
 .cellstriped{background:repeating-linear-gradient(48deg,#E4E4DE 0 4px,#EFEFEA 4px 8px) !important}
 .cellstriped.leave{background:repeating-linear-gradient(48deg,#EBD9B8 0 4px,#F5EDDC 4px 8px) !important}
 .cellstriped.rest{background:repeating-linear-gradient(48deg,#DCDCD6 0 4px,#EDEDE8 4px 8px) !important}
@@ -516,14 +525,14 @@ function weekStartOf(iso) {
 var KEY = 'jianchi-v1';
 var QUOTA_MAX = 3;   /* 每周休息日 / 请假各最多 3 天 */
 var PALETTE = {
-  green:  { bg: '#DDEBCB', c2: '#EDF5E1', deep: '#8FB55C', ring: '#BEDD94' },
-  purple: { bg: '#DED8EF', c2: '#EBE8F7', deep: '#9C8FD0', ring: '#BBA8E8' },
-  blue:   { bg: '#CFE0EF', c2: '#E1EDF6', deep: '#7FA8C9', ring: '#93C6EA' },
-  pink:   { bg: '#F3DCE2', c2: '#FAEFF2', deep: '#CE8CA0', ring: '#EDB4C6' },
-  orange: { bg: '#F7E4CE', c2: '#FCF2E4', deep: '#D0A26A', ring: '#EEC79A' },
-  teal:   { bg: '#CFE7E2', c2: '#E4F2EF', deep: '#79B3A8', ring: '#A2D3C9' },
-  yellow: { bg: '#F5EEC9', c2: '#FAF6E1', deep: '#C9B85E', ring: '#E7D992' },
-  gray:   { bg: '#E6E6E2', c2: '#F1F1EE', deep: '#A3A39B', ring: '#D0D0C9' }
+  green:  { bg: '#DDEBCB', c2: '#EDF5E1', deep: '#8FB55C', ring: '#BEDD94', cal: '#6E9440' },
+  purple: { bg: '#DED8EF', c2: '#EBE8F7', deep: '#9C8FD0', ring: '#BBA8E8', cal: '#7A6BB8' },
+  blue:   { bg: '#CFE0EF', c2: '#E1EDF6', deep: '#7FA8C9', ring: '#93C6EA', cal: '#5E8CB0' },
+  pink:   { bg: '#F3DCE2', c2: '#FAEFF2', deep: '#CE8CA0', ring: '#EDB4C6', cal: '#B56880' },
+  orange: { bg: '#F7E4CE', c2: '#FCF2E4', deep: '#D0A26A', ring: '#EEC79A', cal: '#AD7A3E' },
+  teal:   { bg: '#CFE7E2', c2: '#E4F2EF', deep: '#79B3A8', ring: '#A2D3C9', cal: '#538F84' },
+  yellow: { bg: '#F5EEC9', c2: '#FAF6E1', deep: '#C9B85E', ring: '#E7D992', cal: '#A89440' },
+  gray:   { bg: '#E6E6E2', c2: '#F1F1EE', deep: '#A3A39B', ring: '#D0D0C9', cal: '#7E7E76' }
 };
 var ICONS = ['📖','💪','🛡️','🏃','🧘','💧','🥗','📝','🎯','🎸','🌙','☀️','🚭','🍎','🧹','💊'];
 var LEAVE_REASONS = ['加班', '身体不适', '外出', '家中有事'];
@@ -1037,38 +1046,18 @@ function renderToday() {
    ============================================================ */
 var recView = { hid: 'all', y: 0, m: 0, sel: null };
 function cellInfo(hid, iso) {
-  var hs = activeHabits();
-  if (hid === 'all') {
-    var slots = [], back = false;
-    hs.forEach(function (h) {
-      var r = recOf(h.id, iso);
-      if (!r) { slots.push(null); return; }
-      if (r.backfilled) back = true;
-      var st = recStatus(h, r);
-      if (st === 'rest') slots.push({ c: 'rest' });
-      else if (st === 'leave') slots.push({ c: 'leave' });
-      else if (st === 'relapse') slots.push({ c: 'relapse' });
-      else slots.push({ c: (PALETTE[h.color] || PALETTE.green).ring });
-    });
-    return { slots: slots, total: hs.length, back: back, striped: null };
-  }
   var h = habitById(hid);
-  if (!h) return { slots: [], total: 0, back: false, striped: null };
+  if (!h) return { slots: [], total: 0, back: false, striped: null, done: false };
   var r = recOf(h.id, iso);
-  if (!r) return { slots: [], total: 0, back: false, striped: null };
-  var back2 = !!r.backfilled;
-  var st2 = recStatus(h, r);
-  if (st2 === 'rest') return { slots: [], total: 0, back: back2, striped: 'rest' };
-  if (st2 === 'leave') return { slots: [], total: 0, back: back2, striped: 'leave' };
-  if (st2 === 'relapse') return { slots: [], total: 0, back: back2, striped: 'relapse' };
-  if (h.type === 'abstain') return { slots: [], total: 0, back: back2, striped: null };
-  var goal = h.goalMinutes || 0, m = r.minutes || 0;
-  var tone = 'ring';
-  if (goal > 0) {
-    var ratio = m / goal;
-    tone = ratio >= 1 ? 'ring' : (ratio >= .5 ? 'ring' : 'ring');
-  }
-  return { slots: [], total: 0, back: back2, striped: null };
+  if (!r) return { slots: [], total: 0, back: false, striped: null, done: false };
+  var back = !!r.backfilled;
+  var st = recStatus(h, r);
+  if (st === 'rest') return { slots: [], total: 0, back: back, striped: 'rest', done: false };
+  if (st === 'leave') return { slots: [], total: 0, back: back, striped: 'leave', done: false };
+  if (st === 'relapse') return { slots: [], total: 0, back: back, striped: 'relapse', done: false };
+  /* 打卡成功（戒断型的「坚持住了」也算）→ 给一个显眼的实心色块 */
+  var tone = (PALETTE[h.color] || PALETTE.green).cal;
+  return { slots: [], total: 0, back: back, striped: null, done: true, tone: tone };
 }
 function dayDetail(iso) {
   var t = todayISO();
@@ -1151,40 +1140,29 @@ function renderRecords() {
     var cls = 'ccell' + (future ? ' future' : '') + (iso === t ? ' today' : '') +
               (iso === sel ? ' sel' : '') + (dow >= 5 ? ' we' : '');
     if (ci.striped) cls += ' cellstriped ' + ci.striped;
-    var rings = '';
-    if (ci.slots && ci.slots.some(function (x) { return x; })) {
-      var nTotal = Math.max(1, ci.total || ci.slots.length);
-      var inset = 10, holeMin = 26;
-      var step = Math.min(8, (100 - inset * 2 - holeMin) / nTotal);
-      var inner = '';
-      ci.slots.forEach(function (x, k) {
-        if (!x) return;
-        var isPat = (x.c === 'rest' || x.c === 'leave' || x.c === 'relapse');
-        var rc = x.c === 'rest' ? '#8E8E86' : (x.c === 'leave' ? '#C79A55' : (x.c === 'relapse' ? '#E0A8A8' : x.c));
-        var pat = '';
-        if (x.c === 'rest') pat = 'repeating-linear-gradient(48deg,#8E8E86 0 2.5px,#C4C4BC 2.5px 5px)';
-        else if (x.c === 'leave') pat = 'repeating-linear-gradient(48deg,#C79A55 0 2.5px,#EBD9B8 2.5px 5px)';
-        else pat = rc;
-        inner += '<i style="--pad:' + inset + '%;--step:' + step + '%;--ri:' + k + ';background:' + pat + '"></i>';
-        inner += '<b class="ccore" style="--pad:' + inset + '%;--step:' + step + '%;--ci:' + (k + 1) + '"></b>';
-      });
-      rings = '<span class="crings">' + inner + '</span>';
+    /* 打卡成功：整格实心色块（比细环显眼得多），补打的再加右上角小三角 */
+    var fill = '';
+    if (ci.done && ci.tone) {
+      cls += ' done';
+      fill = '<i class="cfill" style="background:' + ci.tone + '"></i>';
     }
     cells += '<button class="' + cls + '" data-act="day" data-date="' + iso + '"' +
-      (future ? ' disabled' : '') + '>' + rings + '<span class="cn">' + d + '</span>' +
-      (ci.back ? '<i class="bk"></i>' : '') + '</button>';
+      (future ? ' disabled' : '') + '>' + fill + '<span class="cn">' + d + '</span>' +
+      (ci.back ? '<i class="bk" title="补打"></i>' : '') + '</button>';
   }
   h += '<div class="calwrap"><div class="calwk">' + ['一','二','三','四','五','六','日'].map(function (w) { return '<span>' + w + '</span>'; }).join('') +
        '</div><div class="cgrid">' + cells + '</div>';
 
   {
     var hh = habitById(recView.hid);
+    var doneColor = (PALETTE[(hh && hh.color) || 'green'] || PALETTE.green).cal;
     var lg = (hh && hh.type === 'abstain')
-      ? [['#EDEDE8', '无记录'], ['#93C6EA', '坚持'], ['#E0A8A8', '破戒']]
-      : [['#EDEDE8', '无记录'], ['#BEDD94', '已打卡'], ['repeating-linear-gradient(48deg,#8E8E86 0 3px,#C4C4BC 3px 6px)', '休息日'], ['repeating-linear-gradient(48deg,#C79A55 0 3px,#EBD9B8 3px 6px)', '请假']];
+      ? [[doneColor, '坚持住了'], ['#E0A8A8', '重新开始'], ['#EDEDE8', '无记录']]
+      : [[doneColor, '已打卡'], ['repeating-linear-gradient(48deg,#8E8E86 0 3px,#C4C4BC 3px 6px)', '休息日'], ['repeating-linear-gradient(48deg,#C79A55 0 3px,#EBD9B8 3px 6px)', '请假'], ['#EDEDE8', '无记录']];
     h += '<div class="legend2">' + lg.map(function (x) {
       return '<span><i style="background:' + x[0] + '"></i>' + x[1] + '</span>';
     }).join('') + '</div>';
+    h += '<div class="calhint">右上角小三角＝补打</div>';
   }
   /* 一键补齐：原来只在「全部」视图里出现，现在「全部」已移除，改放在每个习惯视图下 */
   {
