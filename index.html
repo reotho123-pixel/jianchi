@@ -340,7 +340,7 @@ body.dragging-card{touch-action:none;user-select:none;-webkit-user-select:none}
   box-shadow:0 8px 22px rgba(26,26,26,.2);
 }
 .navin .thumb{
-  position:absolute;top:7px;bottom:7px;left:7px;width:calc((100% - 14px) / 3);
+  position:absolute;top:7px;bottom:7px;left:7px;width:calc((100% - 14px) / 4);
   border-radius:999px;background:#fff;transition:transform .28s cubic-bezier(.3,.8,.3,1);
   box-shadow:inset 0 0 0 1.4px rgba(26,26,26,.1);
 }
@@ -452,6 +452,43 @@ body.dragging-card{touch-action:none;user-select:none;-webkit-user-select:none}
 
 @keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.05)}100%{transform:scale(1)}}
 .pop{animation:pop .42s ease}
+
+/* ---------- 小树林：今日页顶部那棵正在长的树 ---------- */
+/* 裸圈，没有卡片：圈直接坐在页面背景上，字居中在圈下面 */
+.thero{text-align:center;margin-bottom:22px}
+.thering{position:relative;width:252px;height:252px;margin:2px auto 0}
+.thering > svg.ring2{position:absolute;left:0;top:0;width:100%;height:100%;
+  transform:rotate(-90deg)}
+.thering .rbg{fill:none;stroke:var(--line);stroke-width:7}
+.thering .rfg{fill:none;stroke:#8FB55C;stroke-width:7;stroke-linecap:round;
+  transition:stroke-dashoffset .55s cubic-bezier(.22,1,.36,1)}
+/* 树根处一层柔光；用 alpha 渐变收边，免得跟页面背景的渐变接出一条缝 */
+.thering .thal{position:absolute;inset:26px;border-radius:50%;
+  background:radial-gradient(circle at 50% 78%,rgba(237,245,225,.95) 0%,rgba(237,245,225,0) 72%)}
+.thering .ttree{position:absolute;left:26px;right:26px;top:21px;bottom:16px}
+.thering .ttree svg{width:100%;height:100%;display:block;overflow:visible}
+.thero .tday{font-size:12.5px;color:var(--muted);margin-top:9px;font-variant-numeric:tabular-nums}
+.thero .tday b{font-size:20px;line-height:1;letter-spacing:-.5px;color:var(--ink)}
+.thero .tsub{font-size:12.5px;color:var(--muted);margin-top:11px;line-height:1.5}
+.thero .tsub.full{color:#5F8A2A}
+.thero .sum-l{margin-top:8px}
+.thero .sum-l.done{color:#4E6A22}
+
+/* ---------- 森林页 ---------- */
+.fgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.fcell{background:rgba(255,255,255,.95);border-radius:20px;padding:9px 8px 8px;
+  text-align:center;border:1.4px dashed rgba(26,26,26,.07);position:relative}
+.fcell.growing{background:linear-gradient(142deg,#DDEBCB,#EDF5E1);
+  border-color:rgba(255,255,255,.9);box-shadow:0 5px 14px rgba(26,26,26,.06)}
+.fcell.fresh{background:linear-gradient(142deg,#EDF5E1,#F6FAF0);
+  border-color:rgba(143,181,92,.35)}
+.fcell .fday{font-size:10.5px;color:#6E9440;margin-bottom:3px;font-variant-numeric:tabular-nums}
+.fcell .ft{height:80px;display:flex;align-items:flex-end;justify-content:center}
+.fcell .ft svg{width:100%;height:100%;display:block}
+.fcell .fn{font-size:11.5px;color:var(--muted);margin-top:6px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fcell.growing .fn,.fcell.fresh .fn{color:#4E6A22}
+
 </style>
 </head>
 <body>
@@ -461,6 +498,7 @@ body.dragging-card{touch-action:none;user-select:none;-webkit-user-select:none}
   <span class="thumb"></span>
   <button data-tab="records">记录</button>
   <button data-tab="today" class="on">今日</button>
+  <button data-tab="forest">森林</button>
   <button data-tab="mine">我的</button>
 </div></nav>
 
@@ -1076,9 +1114,7 @@ function renderToday() {
 
   var h = '';
   h += '<div class="topRow"><div class="tmain ctr"><h1 class="h1">今日</h1><p class="date">' + fmtDate(t) + '</p></div></div>';
-  h += '<div class="sum"><span class="sum-n">' + done + '<i>/' + hs.length + '</i></span>' +
-       '<span class="sum-l' + (all ? ' done' : '') + '">' +
-       (all ? '今日全部完成 🎉' : '已完成 · ' + fmtMin(mins)) + '</span></div>';
+  if (hs.length) h += treeHero(done, hs.length, mins);
 
   if (!hs.length) {
     h += '<div class="empty">还没有打卡项<button class="pbtn" data-act="newHabit">添加习惯</button></div>';
@@ -1179,6 +1215,11 @@ function renderRecords() {
   /* 「全部」视图已移除：筛选始终落在某个具体习惯上（默认第一个） */
   if (!hs.length) recView.hid = null;
   else if (recView.hid === 'all' || !hs.some(function (x) { return x.id === recView.hid; })) recView.hid = hs[0].id;
+  if (!hs.length) {
+    /* 兜底：习惯全被归档时，原版会在这里崩（monthStats(undefined)），记录页白屏 */
+    return '<div class="rhead"><div class="rtitle">打卡记录</div></div>' +
+      '<div class="empty">没有可看的打卡项<br>去「我的」新建一个，或用「导入数据」恢复备份</div>';
+  }
   var y = recView.y, m = recView.m;
   var isCurMonth = (y === td.getFullYear() && m === td.getMonth());
   var sel = recView.sel;
@@ -2009,12 +2050,903 @@ document.addEventListener('pointercancel', function () {
 }, true);
 window.addEventListener('blur', function () { if (drag.el) cancelDrag(); });
 
+/* 小树林引擎 —— 原样搬入，只包了一层 IIFE，避免跟 app 的同名变量打架 */
+var TREEW = (function(){
+/* ===================== 工具 ===================== */
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const lerp  = (a,b,t) => a + (b-a)*t;
+const DEG   = d => d * Math.PI / 180;
+const wait  = ms => new Promise(r => setTimeout(r, ms));
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function rnd(i){ const x = Math.sin(i*127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+/* 生长曲线：前期涨得快，保证每天都能看见变化 */
+function sizeOf(w){ return .28 + .72 * Math.pow(clamp(w, 0, 1), .42); }
+function hex2rgb(h){ h = h.replace('#',''); return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)]; }
+function mixc(a,b,t){
+  const A = Array.isArray(a) ? a : hex2rgb(a), B = Array.isArray(b) ? b : hex2rgb(b);
+  return A.map((v,i) => Math.round(lerp(v, B[i], t)));
+}
+const rgb = c => `rgb(${c[0]},${c[1]},${c[2]})`;
+
+function todayStr(){
+  const d = new Date(), z = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}`;
+}
+function dayDiff(a,b){
+  const A = a.split('-').map(Number), B = b.split('-').map(Number);
+  return Math.round((new Date(B[0],B[1]-1,B[2]) - new Date(A[0],A[1]-1,A[2])) / 86400000);
+}
+function prettyDate(s){
+  const p = s.split('-').map(Number);
+  return `${p[1]}月${p[2]}日`;
+}
+
+/* ===================== 品种（50 种，按原型 archetype 驱动） =====================
+   a 原型：
+     spread   开展伞形（樱/桃/杏/梨/苹果/海棠/合欢…）
+     round    团冠（香樟/悬铃木/国槐/椴…）
+     vase     杯形（榆/榉/梧桐/玉兰…）
+     umbrella 裸干平顶（松/木棉/凤凰木/栾…）
+     weep     垂枝（垂柳）
+     gnarl    虬曲老树（梅/蜡梅）
+     fan      扇形叶（银杏）
+     conifer  层叠针叶塔形（雪松/云杉/冷杉/水杉/圆柏）
+     column   细高柱形/火焰形（侧柏/龙柏/意大利柏）
+     shrub    灌木丛（山茶/紫薇/丁香/紫荆/石榴）
+     palm     棕榈
+     bamboo   竹丛
+   P 参数（省略就用 DEF 默认值，见下文）
+   f 花：{ c 颜色, k 花型, s 大小, bare 先花后叶 }
+*/
+const SPECIES = [
+  /* ---- 0-9 起步 ---- */
+  { n:'马尾松', p:0,    a:'umbrella', b:'#7a5636', l:['#2f6b3f','#4e9152','#7ab86a'],
+    P:{ th:82, tw:11, limbs:5, angBase:34, angStep:14, len:42, spread:26, up:1.02, maxAng:84, dec:[.64,.88], depth:3, massS:.72, leafKind:'needle', leafS:1.0, leafN:8 } },
+  { n:'白桦',   p:60,   a:'round',    b:'#e6e3da', l:['#5a8f4a','#8dc06a','#c2dc8e'],
+    P:{ th:56, tw:7.5, limbs:4, angBase:18, angStep:12, len:40, spread:34, up:.80, dec:[.62,.88], depth:3, massS:.72, tw2:'#b9b4a6' } },
+  { n:'垂柳',   p:120,  a:'weep',     b:'#6b5540', l:['#5a8f4a','#83b55e','#b2d47c'],
+    P:{ th:56, tw:12, limbs:5, angBase:14, angStep:7, len:31, spread:16, up:1.18, maxAng:88, grav:.90, dec:[.74,.94], depth:4, massS:.48, leafS:.72, leafN:4, hangLeaf:true, leafKind:'narrow', ordHi:.90 } },
+  { n:'香樟',   p:180,  a:'round',    b:'#6a5340', l:['#2b5f3c','#3f854d','#63a660'],
+    P:{ th:40, tw:12, limbs:5, angBase:20, angStep:12, len:42, spread:36, up:.74, dec:[.64,.88], depth:3, massS:1.06 } },
+  { n:'榆树',   p:240,  a:'vase',     b:'#5f4a34', l:['#3f7a44','#5da05a','#8fc478'],
+    P:{ th:36, tw:11, limbs:4, angBase:15, angStep:14, len:56, spread:22, up:.94, dec:[.66,.92], depth:3, massS:.9 } },
+  { n:'银杏',   p:300,  a:'fan',      b:'#6a5334', l:['#8a9a2e','#c4b83c','#e8d45a'],
+    P:{ th:44, tw:9, limbs:4, angBase:20, angStep:13, len:46, spread:30, up:.74, dec:[.60,.84], depth:3, massS:.84, leafS:1.5, leafKind:'fan' } },
+  { n:'梧桐',   p:360,  a:'vase',     b:'#8a9a86', l:['#3a7a45','#59a05c','#8cc47c'],
+    P:{ th:46, tw:13, limbs:5, angBase:16, angStep:12, len:52, spread:24, up:.92, dec:[.66,.92], depth:3, massS:1.0, leafS:2.3, leafN:3 } },
+  { n:'悬铃木', p:420,  a:'round',    b:'#8f8a72', l:['#3f7a42','#5da054','#93c474'],
+    P:{ th:48, tw:14, limbs:5, angBase:22, angStep:11, len:44, spread:38, up:.76, dec:[.66,.90], depth:3, massS:1.12 } },
+  { n:'枫香',   p:480,  a:'spread',   b:'#5f4630', l:['#8c3a26','#c2542f','#e08a45'],
+    P:{ th:46, tw:11, limbs:4, angBase:22, angStep:13, len:50, spread:32, up:.84, depth:3 } },
+  { n:'鸡爪槭', p:540,  a:'spread',   b:'#5a4530', l:['#6e1f22','#a52a2a','#d4453a'],
+    P:{ th:34, tw:7, limbs:5, angBase:26, angStep:12, len:40, spread:36, up:.86, dec:[.56,.80], depth:3, massS:.66, leafS:.7, leafN:6 } },
+
+  /* ---- 10-19 观叶 / 常绿 ---- */
+  { n:'元宝枫', p:600,  a:'spread',   b:'#5f4630', l:['#a04a1e','#cc6a28','#e8a04a'],
+    P:{ th:40, tw:9, limbs:4, angBase:24, angStep:13, len:46, spread:34, up:.82, depth:3 } },
+  { n:'五角枫', p:660,  a:'spread',   b:'#6a5138', l:['#7c8f2c','#b5ab38','#e0c24a'],
+    P:{ th:42, tw:9, limbs:4, angBase:22, angStep:13, len:48, spread:32, up:.84, depth:3 } },
+  { n:'桂花',   p:720,  a:'round',    b:'#5e4a36', l:['#2e6b3c','#458a4a','#6ba85e'],
+    P:{ th:36, tw:11, limbs:5, angBase:20, angStep:12, len:38, spread:36, up:.72, dec:[.62,.86], depth:3, massS:1.0 },
+    f:{ c:'#e8c85a', k:'dot', s:.9 } },
+  { n:'玉兰',   p:780,  a:'vase',     b:'#8a8578', l:['#3f7a44','#5da05a','#8fc478'],
+    P:{ th:42, tw:11, limbs:4, angBase:18, angStep:13, len:50, spread:26, up:.88, dec:[.62,.86], depth:3, massS:.86, leafS:1.7, leafN:3 },
+    f:{ c:'#fbfaf6', k:'cup', s:1.5, bare:true } },
+  { n:'紫玉兰', p:840,  a:'vase',     b:'#7a7566', l:['#3f7a44','#5da05a','#8fc478'],
+    P:{ th:38, tw:10, limbs:4, angBase:20, angStep:13, len:46, spread:28, up:.86, dec:[.62,.86], depth:3, massS:.82, leafS:1.7, leafN:3 },
+    f:{ c:'#c98fc4', k:'cup', s:1.4, bare:true } },
+  { n:'山茶',   p:900,  a:'shrub',    b:'#6a5340', l:['#1f5a35','#2f7a44','#4b9c58'],
+    P:{ h:124, w:86, blobs:12, massS:1.0 },
+    f:{ c:'#d8404f', k:'ball', s:1.1 } },
+  { n:'紫薇',   p:960,  a:'shrub',    b:'#8a7a62', l:['#3f7a44','#5fa04e','#93c46a'],
+    P:{ h:130, w:92, blobs:11, massS:.92 },
+    f:{ c:'#e88fb4', k:'spike', s:1.2 } },
+  { n:'丁香',   p:1020, a:'shrub',    b:'#6a5a44', l:['#4a8a4a','#6ba85e','#9ccc7a'],
+    P:{ h:118, w:84, blobs:10, massS:.86 },
+    f:{ c:'#b39ad4', k:'spike', s:1.3 } },
+  { n:'紫荆',   p:1080, a:'vase',     b:'#5f4a34', l:['#3f7a44','#5da05a','#8fc478'],
+    P:{ th:30, tw:10, limbs:5, angBase:24, angStep:14, len:38, spread:30, up:.82, dec:[.58,.82], depth:3, massS:.78, leafS:1.6, leafN:3 },
+    f:{ c:'#c0409a', k:'blossom', s:.9, bare:true } },
+
+  /* ---- 20-29 春花 ---- */
+  { n:'石榴',   p:1140, a:'shrub',    b:'#7a6a52', l:['#4a8a3a','#6aa84a','#9cc86a'],
+    P:{ h:118, w:82, blobs:10, massS:.88 },
+    f:{ c:'#e05a2a', k:'cup', s:1.1 } },
+  { n:'海棠',   p:1200, a:'spread',   b:'#6e5240', l:['#3f7a49','#5ba55f','#a8dd7a'],
+    P:{ th:38, tw:9, limbs:4, angBase:24, angStep:13, len:42, spread:32, up:.84, depth:3, massS:.9 },
+    f:{ c:'#e87898', k:'blossom', s:1.0 } },
+  { n:'樱花',   p:1260, a:'spread',   b:'#6e5240', l:['#3f7a49','#5ba55f','#a8dd7a'],
+    P:{ th:46, tw:10, limbs:4, angBase:22, angStep:14, len:52, spread:32, up:.84, depth:3 },
+    f:{ c:'#f9bcd8', k:'blossom', s:1.0 } },
+  { n:'桃花',   p:1320, a:'spread',   b:'#6a5038', l:['#4a8a48','#67ab5c','#9cd177'],
+    P:{ th:38, tw:10, limbs:4, angBase:26, angStep:14, len:48, spread:34, up:.86, depth:3, massS:.94 },
+    f:{ c:'#f7a8c4', k:'blossom', s:1.05, bare:true } },
+  { n:'杏花',   p:1380, a:'spread',   b:'#6a5340', l:['#4a8a48','#67ab5c','#9cd177'],
+    P:{ th:42, tw:11, limbs:4, angBase:24, angStep:14, len:50, spread:32, up:.86, depth:3, massS:.96 },
+    f:{ c:'#fdf4f6', k:'blossom', s:1.0, bare:true } },
+  { n:'梨花',   p:1440, a:'spread',   b:'#5f4a34', l:['#4a8a48','#67ab5c','#9cd177'],
+    P:{ th:40, tw:10, limbs:4, angBase:22, angStep:13, len:46, spread:32, up:.84, depth:3 },
+    f:{ c:'#fdfdfa', k:'blossom', s:.95 } },
+  { n:'苹果',   p:1500, a:'round',    b:'#6a5340', l:['#3f7a49','#5ba55f','#a8dd7a'],
+    P:{ th:32, tw:10, limbs:5, angBase:22, angStep:12, len:36, spread:36, up:.76, dec:[.62,.86], depth:3, massS:.96 },
+    f:{ c:'#fbd0dc', k:'blossom', s:1.0 } },
+  { n:'梅花',   p:1560, a:'gnarl',    b:'#4f3b2c', l:['#3f6f47','#5f9455','#8fc06a'],
+    P:{ th:28, tw:12, limbs:4, angBase:28, angStep:16, len:40, spread:40, up:.56, dec:[.52,.80], depth:4, wob:38, sag:-.16, massS:.80, leafS:.95 },
+    f:{ c:'#fbe9f0', k:'blossom', s:1.0, bare:true } },
+  { n:'蜡梅',   p:1620, a:'gnarl',    b:'#5f4a34', l:['#4a7a44','#6b9a52','#96be6c'],
+    P:{ th:26, tw:11, limbs:4, angBase:30, angStep:16, len:38, spread:38, up:.56, dec:[.52,.80], depth:4, wob:34, sag:-.14, massS:.80, leafS:.95 },
+    f:{ c:'#e8c840', k:'ball', s:.9, bare:true } },
+
+  /* ---- 30-39 夏花 / 大乔木 ---- */
+  { n:'合欢',   p:1680, a:'umbrella', b:'#7a6a54', l:['#4a7b4e','#6da25c','#9cc87a'],
+    P:{ th:58, tw:10, limbs:5, angBase:34, angStep:14, len:44, spread:30, up:1.0, dec:[.58,.82], depth:3, massS:.62, leafS:.62, leafN:8 },
+    f:{ c:'#f2a0c0', k:'puff', s:1.0 } },
+  { n:'木棉',   p:1740, a:'umbrella', b:'#8a7a62', l:['#3f6b45','#5c9152','#8cbd72'],
+    P:{ th:76, tw:15, limbs:5, angBase:32, angStep:14, len:48, spread:32, up:1.0, dec:[.60,.86], depth:3, massS:1.0 },
+    f:{ c:'#e0483a', k:'cup', s:1.6, bare:true } },
+  { n:'凤凰木', p:1800, a:'umbrella', b:'#6a5a44', l:['#3f7a44','#5da05a','#93c474'],
+    P:{ th:56, tw:11, limbs:5, angBase:34, angStep:14, len:50, spread:34, up:1.02, dec:[.60,.86], depth:3, massS:.82, leafN:7 },
+    f:{ c:'#e8503a', k:'blossom', s:.95 } },
+  { n:'蓝花楹', p:1860, a:'spread',   b:'#6a5a48', l:['#3d6b4a','#568c56','#84b46a'],
+    P:{ th:52, tw:11, limbs:5, angBase:28, angStep:13, len:46, spread:34, up:.92, dec:[.58,.84], depth:3, massS:.76, leafS:.7, leafN:7 },
+    f:{ c:'#8f9fe0', k:'spike', s:1.1 } },
+  { n:'泡桐',   p:1920, a:'spread',   b:'#8a8270', l:['#4a8a48','#67ab5c','#9cd177'],
+    P:{ th:50, tw:14, limbs:4, angBase:22, angStep:14, len:50, spread:32, up:.88, depth:3, massS:1.02, leafS:2.2, leafN:3 },
+    f:{ c:'#b8a0d8', k:'spike', s:1.3 } },
+  { n:'国槐',   p:1980, a:'round',    b:'#5f4a34', l:['#3f7a44','#5da05a','#8fc478'],
+    P:{ th:44, tw:12, limbs:5, angBase:20, angStep:11, len:42, spread:36, up:.76, dec:[.62,.86], depth:3, massS:1.0 } },
+  { n:'刺槐',   p:2040, a:'spread',   b:'#6a5540', l:['#4a8a48','#67ab5c','#9cd177'],
+    P:{ th:46, tw:11, limbs:4, angBase:22, angStep:13, len:44, spread:32, up:.84, depth:3, massS:.9, leafN:6 },
+    f:{ c:'#fbfaf2', k:'spike', s:1.2 } },
+  { n:'栾树',   p:2100, a:'umbrella', b:'#6a5540', l:['#4a8a48','#6aa84a','#9cc86a'],
+    P:{ th:52, tw:12, limbs:5, angBase:30, angStep:13, len:44, spread:32, up:.98, dec:[.62,.86], depth:3, massS:.9 },
+    f:{ c:'#e8c840', k:'dot', s:1.4 } },
+  { n:'白蜡',   p:2160, a:'vase',     b:'#8a8578', l:['#3f7a44','#5da05a','#8fc478'],
+    P:{ th:44, tw:11, limbs:4, angBase:17, angStep:13, len:50, spread:24, up:.9, dec:[.64,.88], depth:3, massS:1.0, leafN:6 } },
+  { n:'椴树',   p:2220, a:'round',    b:'#5f4a34', l:['#2f6b3c','#4a8a48','#78b45e'],
+    P:{ th:46, tw:12, limbs:4, angBase:20, angStep:12, len:40, spread:36, up:.74, dec:[.64,.88], depth:3, massS:1.08 } },
+
+  /* ---- 40-49 收集向 ---- */
+  { n:'榉树',   p:2280, a:'vase',     b:'#7a6a54', l:['#3f7a44','#5da05a','#8fc478'],
+    P:{ th:38, tw:11, limbs:5, angBase:16, angStep:12, len:54, spread:26, up:.92, dec:[.66,.92], depth:3, massS:.94 } },
+  { n:'鹅掌楸', p:2340, a:'spread',   b:'#6a5540', l:['#4a8a48','#6aa84a','#9cc86a'],
+    P:{ th:48, tw:11, limbs:4, angBase:20, angStep:13, len:46, spread:30, up:.82, depth:3, massS:.86, leafS:2.6, leafN:3 },
+    f:{ c:'#e8c85a', k:'cup', s:1.2 } },
+  { n:'杜英',   p:2400, a:'round',    b:'#6a5540', l:['#2b6b3f','#3f8a4a','#6aad64'],
+    P:{ th:42, tw:11, limbs:5, angBase:20, angStep:12, len:40, spread:36, up:.72, dec:[.62,.86], depth:3, massS:1.0 } },
+  { n:'雪松',   p:2460, a:'conifer',  b:'#5f4a34', l:['#2b5f45','#3d8058','#5da872'],
+    P:{ h:132, tw:10, layers:6, w0:56, w1:9, base:.12, droop:.20, massS:1.0, bw:2.6 } },
+  { n:'云杉',   p:2520, a:'conifer',  b:'#5a4530', l:['#1f5540','#2f7548','#4b9a5c'],
+    P:{ h:138, tw:8, layers:7, w0:44, w1:7, base:.10, droop:.06, massS:.9, bw:2.2 } },
+  { n:'冷杉',   p:2580, a:'conifer',  b:'#6a5540', l:['#255c46','#357a52','#549e6a'],
+    P:{ h:130, tw:9, layers:6, w0:48, w1:8, base:.11, droop:.02, massS:.94, bw:2.4 } },
+  { n:'水杉',   p:2640, a:'conifer',  b:'#8a5a42', l:['#2f6b4a','#458a5c','#6fb078'],
+    P:{ h:142, tw:7, layers:8, w0:50, w1:8, base:.08, droop:.16, massS:.92, bw:1.6, feather:true } },
+  { n:'圆柏',   p:2700, a:'conifer',  b:'#6a5540', l:['#2b5f45','#3d8058','#63a86c'],
+    P:{ h:118, tw:11, layers:6, w0:46, w1:14, base:.14, droop:.14, massS:1.06, bw:2.8 } },
+  { n:'侧柏',   p:2760, a:'column',   b:'#6a5540', l:['#2b5f45','#3d8058','#5da872'],
+    P:{ h:132, tw:8, layers:11, w0:22, w1:5, base:.02, droop:.04, massS:.86, bw:1.6 } },
+  { n:'龙柏',   p:2820, a:'column',   b:'#5f4a34', l:['#255a42','#357a52','#549e68'],
+    P:{ h:130, tw:9, layers:12, w0:25, w1:6, base:.03, droop:.02, massS:.9, bw:1.6, twist:true } },
+  { n:'意大利柏', p:2880, a:'column', b:'#5a4530', l:['#1f4f3a','#2b6b48','#408a5c'],
+    P:{ h:140, tw:8, layers:13, w0:17, w1:4, base:.01, droop:0, massS:.84, bw:1.4 } },
+  { n:'竹丛',   p:2940, a:'bamboo',   b:'#7c9a4c', l:['#4a8a3a','#63a545','#96c765'],
+    P:{ h:154, n:5, tw:8.6, leafLen:27, leafW:6.2 } },
+];
+
+/* 每个品种的取景缩放：把树统一收进 190×190 的框里（只缩不放）
+   由实测 w=1 时的包围盒算出：k = min(1, 160/高, 90/半宽) */
+const FIT = [
+  .726,.838,.811,.692,.600,.796,.596,.789,.677,.776,
+  .894,.812,1,   .800,.667,1,   1,   1,   .957,1,
+  .857,.796,.928,.776,.938,1,   .918,.891,.726,.703,
+  .662,.776,.769,.874,.904,.769,.763,.957,.634,.776,
+  .882,1,   1,   1,   1,   1,   1,   1,   1,   .952
+];
+const fitOf = i => FIT[((i % FIT.length) + FIT.length) % FIT.length] || 1;
+
+/* ===================== 画树 ===================== */
+/* 统一坐标系：树根在 (0,0)，向上为负 y。整棵最大约 150 高、190 宽。
+   四种造型器产出同一种中间结构，画法只有一份：
+   {
+     S,                                     缩放
+     segs:   [{x0,y0,x1,y1,cx,cy,a1,w0,d,trunk,ord}],
+     masses: [{x,y,r,ord,sd,tone,grow}],
+     leaves: [{x,y,ang,s,tone,ord,k,kind,stem,fade}],
+     blooms: [{x,y,ord,bo,r,k}]
+   }
+   a 原型 → 造型器：
+     spread/round/vase/umbrella/weep/gnarl/fan  → shapeSpread
+     conifer/column                             → shapeConifer
+     shrub                                      → shapeShrub
+     bamboo                                     → renderBamboo
+*/
+
+const DEF = {
+  th:46, tw:10, lean:1, limbs:4,
+  angBase:22, angStep:13, len:50,
+  spread:32, up:.84, dec:[.54,.84], depth:3,
+  wob:20, sag:0, massS:1, leafS:1, leafN:5,
+  ordHi:.86, leafKind:'oval', maxAng:84, grav:0, hangLeaf:false
+};
+const PP = P => Object.assign({}, DEF, P || {});
+
+function mkShape(){ return { S:1, segs:[], masses:[], leaves:[], blooms:[] }; }
+
+/* 按高度分配明暗：所有原型共用，保证配色统一 */
+function toneUp(list, lo, hi){
+  let yMin = Infinity, yMax = -Infinity;
+  for(const m of list){ if(m.y < yMin) yMin = m.y; if(m.y > yMax) yMax = m.y; }
+  const span = Math.max(1, yMax - yMin);
+  for(const m of list){
+    m.tone = clamp(lo + ((yMax - m.y) / span) * (hi - lo) + (rnd(m.sd) - .5) * .20, 0, 1);
+  }
+}
+
+/* ---------- 1. 通用分叉树：开展 / 团冠 / 杯形 / 伞形 / 垂枝 / 虬曲 ---------- */
+function shapeSpread(w, seed, sp){
+  const P = PP(sp.P);
+  const sh = mkShape();
+  const S = sizeOf(w); sh.S = S;
+  const TH = P.th * S;
+  const lvl = P.depth + 1;
+  const step = (P.ordHi - .02) / lvl;
+  const wob = P.wob;
+  let k = seed;
+
+  sh.segs.push({ x0:0, y0:0, x1:P.lean * S, y1:-TH, w0:P.tw * S, w1:P.tw * .46 * S,
+                 d:lvl, trunk:true, ord:0, a1:0 });
+
+  const MAXA = P.maxAng || 84;
+  const DEP = Math.max(1, P.depth);
+  function limb(x0, y0, ang, len, wid, d, ord){
+    k++;
+    const a1 = ang + (rnd(k * 7 + 3) - .5) * wob;
+    const gt = P.grav ? P.grav * clamp(1 - d / DEP, 0, 1) : 0;   // 末梢受重力下垂
+    const x1 = x0 + Math.sin(DEG(a1)) * len;
+    const y1 = y0 - Math.cos(DEG(a1)) * len + gt * len;
+    const ca = ang + (a1 - ang) * .5;
+    const cx = x0 + Math.sin(DEG(ca)) * len * .54;
+    const cy = y0 - Math.cos(DEG(ca)) * len * .54 + gt * len * .55 + P.sag * len * .40;
+    sh.segs.push({ x0, y0, x1, y1, cx, cy, a1, w0:wid, d, ord });
+
+    if(d <= 0) return;
+    for(let i=0;i<2;i++){
+      const t = i - .5;
+      const na = clamp(a1 * P.up + t * P.spread * (1 + d * .10) + (rnd(k*3 + i*17) - .5) * wob * .8, -MAXA, MAXA);
+      limb(x1, y1, na, len * lerp(P.dec[0], P.dec[1], rnd(k*5 + i*11)), wid * .60, d - 1,
+           clamp(ord + step * (.75 + rnd(k*9 + i*3) * .55), 0, 1));
+    }
+  }
+
+  const n = P.limbs;
+  for(let i=0;i<n;i++){
+    let a;
+    if(n % 2 === 1 && i === n - 1) a = (rnd(seed + i*31) - .5) * 9;          // 正中主枝
+    else {
+      const side = (i % 2) ? 1 : -1;
+      const rank = Math.floor(i / 2);
+      a = side * (P.angBase + rank * P.angStep) + (rnd(seed + i*31) - .5) * 10;
+    }
+    const h = 1 - Math.floor(i / 2) * .17;                                   // 越外侧的枝着生点越低
+    limb(P.lean * S * h, -TH * h, a, P.len * S * (.92 + rnd(seed + i*7) * .20),
+         P.tw * .54 * S * (1 - i * .05), P.depth, .02 + i * .030);
+  }
+
+  /* ---- 树冠体块 ---- */
+  const sc = P.massS * S;
+  for(const sg of sh.segs){
+    if(sg.trunk) continue;
+    const dt = 1 - sg.d / lvl;
+    const R = sc * (10 + dt * 7);
+    const sd = Math.round(Math.abs(sg.x1) * 7 + Math.abs(sg.y1) * 3 + sg.d * 13) + seed * 3;
+    if(sg.d >= 1) sh.masses.push({ x:(sg.x0+sg.x1)/2, y:(sg.y0+sg.y1)/2, r:R*1.05, ord:sg.ord, sd });
+    if(sg.d <= 1) sh.masses.push({ x:sg.x1, y:sg.y1, r:R*.92, ord:clamp(sg.ord + step*.5, 0, 1), sd:sd+3 });
+  }
+  toneUp(sh.masses, .06, .90);
+  for(const m of sh.masses){ m.grow = .07 + rnd(m.sd + 9) * .16; m.r *= .84 + rnd(m.sd + 21) * .34; }
+
+  /* ---- 叶片 ---- */
+  const tips = sh.segs.filter(sg => sg.d === 0);
+  const HANG = !!P.hangLeaf;
+  tips.forEach((sg, i) => {
+    const gap = P.leafN > 4 ? 26 : 38;
+    for(let j=0;j<P.leafN;j++){
+      const off = (j - (P.leafN-1)/2) * (HANG ? 46 : gap) + (rnd(i*13 + j*7) - .5) * (HANG ? 20 : 26);
+      const a = HANG ? 180 + off : clamp(sg.a1 + off, -114, 114);
+      const dy = 1.6 + rnd(i*11 + j*5) * 4.2;
+      sh.leaves.push({
+        x: sg.x1 + Math.sin(DEG(a)) * dy,
+        y: sg.y1 - Math.cos(DEG(a)) * dy + 1.6,
+        ang: a, kind: HANG ? 'narrow' : P.leafKind, tip: true,
+        s: (3.4 + rnd(i*3 + j*17) * 1.9) * P.leafS,
+        tone: .60 + rnd(i*5 + j*3) * .38,
+        ord: clamp(sg.ord + j*.006, 0, 1),
+        k: i*17 + j*5 + 3
+      });
+    }
+  });
+  /* 枝条中段的叶子 */
+  for(const sg of sh.segs){
+    if(sg.trunk || sg.d > 1) continue;
+    const hang = HANG;
+    for(let m=0;m<3;m++){
+      const t = .30 + m * .26;
+      const a = hang ? 180 + (rnd(sg.d*31 + m*11) - .5) * 44 : sg.a1 + (m - 1) * 62;
+      sh.leaves.push({
+        x: sg.x0 + (sg.x1 - sg.x0) * t + (sg.cx - (sg.x0+sg.x1)/2) * .55 + (hang ? (m-1)*4 : 0),
+        y: sg.y0 + (sg.y1 - sg.y0) * t + (sg.cy - (sg.y0+sg.y1)/2) * .55 + (hang ? 2 : 0),
+        ang: hang ? a : clamp(a, -160, 160), kind: hang ? 'narrow' : P.leafKind,
+        s: (3.0 + rnd(sg.d*7 + m*11) * 1.5) * P.leafS,
+        tone: .52 + rnd(sg.d + m*7) * .40,
+        ord: clamp(sg.ord + .022, 0, 1),
+        k: Math.round(Math.abs(sg.x1) * 5 + m * 7)
+      });
+    }
+  }
+  /* 幼苗期主干上的叶子，免得小苗是一根光杆 */
+  for(let i=0;i<6;i++){
+    const h = .38 + i * .115;
+    sh.leaves.push({
+      x: (i%2 ? 1 : -1) * (4 + 8*h) * S,
+      y: -TH * h,
+      ang: (i%2 ? 1 : -1) * (68 + rnd(i+61) * 22),
+      s: (5.4 + rnd(i+71) * 2.4) * (.80 + .30 * S) * P.leafS,
+      tone: .34 + h * .48, ord: .012 + i * .022,
+      stem: true, fade: .22 + i * .072, kind: P.leafKind, k: i + 200
+    });
+  }
+
+  /* ---- 开花点：枝梢 + 一部分叶片位置 ---- */
+  const bl = sh.segs.filter(sg => sg.d <= 1).map(sg => ({ x:sg.x1, y:sg.y1, ord:sg.ord, k:sg.d*13 + 5 }));
+  const lf = sh.leaves.filter(l => l.tip);
+  for(let i=1;i<lf.length;i+=3) bl.push({ x:lf[i].x, y:lf[i].y, ord:lf[i].ord, k:lf[i].k });
+  bl.sort((a,b) => b.y - a.y);
+  bl.forEach((t,i) => { t.bo = bl.length < 2 ? 0 : i / (bl.length - 1); t.r = 3.7 + rnd(t.k) * 1.7; });
+  sh.blooms = bl;
+
+  /* ---- 先花后叶：叶片整体推迟到开花之后 ---- */
+  if(sp.f && sp.f.bare){
+    for(const m of sh.masses) m.ord = .88 + clamp(m.ord, 0, 1) * .12;
+    for(const l of sh.leaves) l.ord = .88 + clamp(l.ord, 0, 1) * .12;
+  }
+  return sh;
+}
+
+/* ---------- 2. 针叶塔形 / 柱形 ---------- */
+function shapeConifer(w, seed, sp){
+  const P = PP(sp.P);
+  const sh = mkShape();
+  const S = sizeOf(w); sh.S = S;
+  const H = (P.h || 130) * S;
+  const L = P.layers || 6;
+  const shown = w * (L + .6);
+  let topY = 0;
+
+  for(let i=0;i<L;i++){
+    const t = L < 2 ? 0 : i / (L - 1);
+    const grow = clamp(shown - i, 0, 1);
+    if(grow <= .02) continue;
+    const y = -H * (P.base + (1 - P.base) * t);
+    if(y < topY) topY = y;
+    const off = P.snake ? Math.sin(i * 1.15) * lerp(P.w0, P.w1, t) * S * .45 : 0;
+    const halfW = lerp(P.w0, P.w1, t) * S * grow * (1 + (rnd(seed + i*13) - .5) * .16);
+    const droop = (P.droop || 0) * halfW;
+    const bw = (P.bw || 2.2) * S * (1 - t * .62);
+    const ord = clamp(.02 + t * P.ordHi * .95, 0, .96);
+
+    sh.segs.push({ x0:off, y0:y, x1:off - halfW, y1:y + droop, a1:-42,
+                   cx:off - halfW*.34, cy:y - 1.5*S, w0:bw, d:0, ord });
+    sh.segs.push({ x0:off, y0:y, x1:off + halfW, y1:y + droop, a1:42,
+                   cx:off + halfW*.34, cy:y - 1.5*S, w0:bw, d:0, ord });
+
+    const n = 3;
+    for(let j=0;j<n;j++){
+      const u = (j + 1) / (n + 1);
+      const rr = P.massS * S * (11.5 - t * 3.6) * (P.feather ? .84 : 1);
+      for(const s of [-1, 1]){
+        sh.masses.push({
+          x: off + s * halfW * u, y: y + droop * u * u,
+          r: rr * (1 - u * .16), ord: clamp(ord + .012, 0, 1),
+          sd: Math.round(seed * 3 + i * 17 + j * 7 + (s > 0 ? 3 : 0))
+        });
+      }
+    }
+  }
+
+  sh.segs.unshift({ x0:0, y0:0, x1:0, y1:Math.min(topY, -H * P.base) - 4*S,
+                    w0:P.tw * S, w1:P.tw * .24 * S, d:L + 1, trunk:true, ord:0, a1:0 });
+
+  toneUp(sh.masses, .04, .92);
+  for(const m of sh.masses){ m.grow = .05 + rnd(m.sd + 9) * .13; m.r *= .86 + rnd(m.sd + 21) * .30; }
+
+  if(P.twist || P.feather){                       // 龙柏 / 水杉：加一点针叶质感
+    for(const sg of sh.segs){
+      if(sg.trunk) continue;
+      for(let j=0;j<2;j++){
+        sh.leaves.push({
+          x: sg.x0 + (sg.x1 - sg.x0) * (.35 + j * .45),
+          y: sg.y0 + (sg.y1 - sg.y0) * (.35 + j * .45),
+          ang: sg.a1 + (j ? 40 : -40), kind:'needle', k: sg.d * 5 + j,
+          s: 3.0 + rnd(sg.ord * 97 + j) * 1.6, tone: .58 + rnd(sg.ord * 31 + j) * .34,
+          ord: sg.ord
+        });
+      }
+    }
+  }
+
+  const bl = sh.masses.filter((_, i) => i % 2 === 0).map(m => ({ x:m.x, y:m.y, ord:m.ord, k:m.sd }));
+  bl.sort((a,b) => b.y - a.y);
+  bl.forEach((t,i) => { t.bo = bl.length < 2 ? 0 : i / (bl.length - 1); t.r = 3.6 + rnd(t.k) * 1.6; });
+  sh.blooms = bl;
+
+  if(sp.f && sp.f.bare){
+    for(const m of sh.masses) m.ord = .88 + clamp(m.ord, 0, 1) * .12;
+    for(const l of sh.leaves) l.ord = .88 + clamp(l.ord, 0, 1) * .12;
+  }
+  return sh;
+}
+
+/* ---------- 3. 灌木丛 ---------- */
+const SHRUB_TIERS = [
+  { t:0.00, n:3, w:0.60, r:1.00 },
+  { t:0.32, n:3, w:0.96, r:1.06 },
+  { t:0.60, n:2, w:0.74, r:0.94 },
+  { t:0.82, n:1, w:0.28, r:0.82 }
+];
+function shapeShrub(w, seed, sp){
+  const P = PP(sp.P);
+  const sh = mkShape();
+  const S = sizeOf(w); sh.S = S;
+  const H = (P.h || 100) * S, W = (P.w || 76) * S;
+
+  sh.segs.push({ x0:0, y0:0, x1:1.2*S, y1:-H * .30, w0:(P.tw || 5) * S, w1:(P.tw || 5) * .45 * S,
+                 d:9, trunk:true, ord:0, a1:0 });
+  /* 两三条短枝，避免灌木看起来是浮在地上的球 */
+  for(let i=0;i<3;i++){
+    const side = i % 2 ? 1 : -1;
+    const a = side * (18 + i * 9);
+    const L = H * (.30 + rnd(seed + i*7) * .22);
+    sh.segs.push({ x0:0, y0:-H*.26, x1:Math.sin(DEG(a))*L, y1:-H*.26 - Math.cos(DEG(a))*L,
+                   cx:Math.sin(DEG(a*.6))*L*.5, cy:-H*.26 - Math.cos(DEG(a*.6))*L*.5,
+                   a1:a, w0:(P.tw||5)*.5*S, d:1, ord:.06 + i*.05 });
+  }
+
+  let idx = 0;
+  const spot = [];
+  SHRUB_TIERS.forEach((T, ti) => {
+    for(let j=0;j<T.n;j++){
+      const u = T.n < 2 ? 0 : (j / (T.n - 1)) * 2 - 1;
+      spot.push({
+        x: u * T.w * W * .5 + (rnd(seed + ti*13 + j*7) - .5) * 9 * S,
+        y: -H * (.24 + .70 * T.t) + (rnd(seed + ti*5 + j*3) - .5) * 8 * S,
+        r: T.r * P.massS * S * W * .37, idx: idx++,
+        ord: clamp(.05 + T.t * .74 + (rnd(ti*3 + j) - .5) * .07, 0, .96)
+      });
+    }
+  });
+  sh.masses = spot.map(o => ({ x:o.x, y:o.y, r:o.r, ord:o.ord, sd:seed*3 + o.idx*29 }));
+
+  toneUp(sh.masses, .06, .92);
+  for(const m of sh.masses){ m.grow = .10 + rnd(m.sd + 9) * .14; m.r *= .86 + rnd(m.sd + 21) * .28; }
+
+  /* 叶片：贴着球面撒一圈，给轮廓一点毛边 */
+  const leafN = P.leafN > 5 ? P.leafN : 5;
+  for(let i=0;i<sh.masses.length;i++){
+    const m = sh.masses[i];
+    for(let j=0;j<leafN;j++){
+      const a = (j * 360 / leafN) + rnd(i*7 + j*3) * 40;
+      sh.leaves.push({
+        x: m.x + Math.cos(DEG(a)) * m.r * .92,
+        y: m.y + Math.sin(DEG(a)) * m.r * .80,
+        ang: a - 90, kind: P.leafKind, k: i*13 + j*5,
+        s: (3.2 + rnd(i*11 + j*7) * 1.8) * P.leafS,
+        tone: .54 + rnd(i*3 + j*17) * .40,
+        ord: clamp(m.ord + .02, 0, 1)
+      });
+    }
+  }
+
+  const bl = [];
+  sh.masses.forEach((m,i) => {
+    bl.push({ x:m.x, y:m.y, ord:m.ord, k:m.sd });
+    if(i % 2 === 0) bl.push({ x:m.x - m.r*.5, y:m.y - m.r*.35, ord:m.ord, k:m.sd + 7 });
+  });
+  bl.sort((a,b) => b.y - a.y);
+  bl.forEach((t,i) => { t.bo = bl.length < 2 ? 0 : i / (bl.length - 1); t.r = 3.6 + rnd(t.k) * 1.6; });
+  sh.blooms = bl;
+
+  if(sp.f && sp.f.bare){
+    for(const m of sh.masses) m.ord = .88 + clamp(m.ord, 0, 1) * .12;
+    for(const l of sh.leaves) l.ord = .88 + clamp(l.ord, 0, 1) * .12;
+  }
+  return sh;
+}
+
+/* ---------- 叶形 ---------- */
+function leafPathWorld(x, y, ang, s){
+  if(!isFinite(x) || !isFinite(y) || !isFinite(ang) || !isFinite(s)) return '';
+  const ca = Math.cos(DEG(ang)), sa = Math.sin(DEG(ang));
+  const P = (lx, ly) => `${(x + lx*ca - ly*sa).toFixed(1)},${(y + lx*sa + ly*ca).toFixed(1)}`;
+  return `M${P(0,0)}`
+       + `C${P(s*.92,-s*.56)} ${P(s*.86,-s*1.58)} ${P(0,-s*2.16)}`
+       + `C${P(-s*.86,-s*1.58)} ${P(-s*.92,-s*.56)} ${P(0,0)}Z`;
+}
+function leafPath(kind, x, y, ang, s){
+  if(kind === 'oval' || !kind) return leafPathWorld(x, y, ang, s);
+  if(!isFinite(x) || !isFinite(y) || !isFinite(ang) || !isFinite(s)) return '';
+  const ca = Math.cos(DEG(ang)), sa = Math.sin(DEG(ang));
+  const P = (lx, ly) => `${(x + lx*ca - ly*sa).toFixed(1)},${(y + lx*sa + ly*ca).toFixed(1)}`;
+  if(kind === 'fan')                                          // 银杏：小扇子
+    return `M${P(0,0)}L${P(-s*1.0,-s*1.40)}Q${P(0,-s*1.92)} ${P(s*1.0,-s*1.40)}Z`;
+  if(kind === 'needle')                                       // 针叶
+    return `M${P(0,0)}Q${P(s*.36,-s*1.1)} ${P(0,-s*3.0)}Q${P(-s*.36,-s*1.1)} ${P(0,0)}Z`;
+  if(kind === 'narrow')                                       // 柳 / 合欢 / 蓝花楹：细长
+    return `M${P(0,0)}Q${P(s*.54,-s*.98)} ${P(0,-s*2.8)}Q${P(-s*.54,-s*.98)} ${P(0,0)}Z`;
+  if(kind === 'broad')                                        // 梧桐 / 泡桐：大叶
+    return `M${P(0,0)}`
+         + `C${P(s*1.36,-s*.28)} ${P(s*1.30,-s*1.60)} ${P(0,-s*1.92)}`
+         + `C${P(-s*1.30,-s*1.60)} ${P(-s*1.36,-s*.28)} ${P(0,0)}Z`;
+  return leafPathWorld(x, y, ang, s);
+}
+/* 椭圆在绝对坐标里画成路径，方便把几十朵花合并成几个 path */
+function ellPath(cx, cy, rx, ry, rot){
+  const a = DEG(rot), ca = Math.cos(a), sa = Math.sin(a);
+  const x0 = cx + rx*ca, y0 = cy + rx*sa;
+  const x1 = cx - rx*ca, y1 = cy - rx*sa;
+  return `M${x0.toFixed(1)},${y0.toFixed(1)}`
+       + `A${rx.toFixed(2)},${ry.toFixed(2)} ${rot.toFixed(1)} 1 1 ${x1.toFixed(1)},${y1.toFixed(1)}`
+       + `A${rx.toFixed(2)},${ry.toFixed(2)} ${rot.toFixed(1)} 1 1 ${x0.toFixed(1)},${y0.toFixed(1)}Z`;
+}
+/* 圆润的闭合团块，用来堆树冠 */
+function blobPath(x, y, r, sd){
+  if(!isFinite(x) || !isFinite(y) || !isFinite(r) || r <= 0) return '';
+  const N = 7, pts = [];
+  for(let i=0;i<N;i++){
+    const a = (i/N) * Math.PI * 2 - Math.PI/2;
+    const rr = r * (.80 + rnd(sd + i*13) * .44);
+    pts.push([x + Math.cos(a)*rr, y + Math.sin(a)*rr*.86]);
+  }
+  let d = '';
+  for(let i=0;i<N;i++){
+    const p = pts[i], q = pts[(i+1)%N];
+    const mx = (p[0]+q[0])/2, my = (p[1]+q[1])/2;
+    d += (i === 0 ? `M${mx.toFixed(1)},${my.toFixed(1)}` : '')
+       + `Q${p[0].toFixed(1)},${p[1].toFixed(1)} ${mx.toFixed(1)},${my.toFixed(1)}`;
+  }
+  return d + 'Z';
+}
+
+/* ---------- 花型 ---------- */
+function flowerPaths(kind, items, color){
+  const L = {};
+  const put = (fill, d) => { if(d){ (L[fill] = L[fill] || []).push(d); } };
+  for(const f of items){
+    const r = f.r;
+    if(kind === 'cup'){                                  // 玉兰 / 木棉 / 石榴：大杯状
+      for(let i=0;i<6;i++){
+        const a = i * 60 - 30;
+        const wx = f.x + Math.cos(DEG(a-90)) * r * .50;
+        const wy = f.y + Math.sin(DEG(a-90)) * r * .50;
+        put(i % 2 ? color : '#ffffff', ellPath(wx, wy, r*.40, r*.78, a));
+      }
+      put('#e8b84a', ellPath(f.x, f.y, r*.22, r*.22, 0));
+    }else if(kind === 'ball'){                           // 山茶 / 蜡梅：一团
+      put(color, ellPath(f.x, f.y, r*.92, r*.86, 0));
+      put('rgba(255,255,255,.55)', ellPath(f.x - r*.24, f.y - r*.26, r*.40, r*.36, 0));
+    }else if(kind === 'puff'){                           // 合欢：绒球
+      put(color, ellPath(f.x, f.y, r*.70, r*.64, 0));
+      for(let i=0;i<9;i++){
+        const a = i * 40;
+        put('rgba(255,255,255,.85)', ellPath(f.x + Math.cos(DEG(a))*r*.70, f.y + Math.sin(DEG(a))*r*.70, r*.15, r*.15, 0));
+      }
+    }else if(kind === 'spike'){                          // 丁香 / 刺槐：一串
+      const n = 6;
+      for(let i=0;i<n;i++){
+        const t = i / (n - 1);
+        const rr = r * (1 - Math.abs(t - .5) * 1.5) * .52;
+        put(i % 2 ? color : '#ffffff',
+            ellPath(f.x + (rnd(f.k + i*7) - .5) * r * .34, f.y - r*1.15 + t*r*2.3, rr, rr*.88, 0));
+      }
+    }else if(kind === 'dot'){                            // 桂花：小米粒
+      for(let i=0;i<5;i++){
+        const a = i * 72 + 20;
+        put(color, ellPath(f.x + Math.cos(DEG(a))*r*.52, f.y + Math.sin(DEG(a))*r*.52, r*.19, r*.19, 0));
+      }
+    }else{                                               // blossom：五瓣
+      for(let i=0;i<5;i++){
+        const a = i * 72;
+        const wx = f.x + Math.cos(DEG(a-90)) * r * .80;
+        const wy = f.y + Math.sin(DEG(a-90)) * r * .80;
+        put(i % 2 ? '#ffffff' : color, ellPath(wx, wy, r*.54, r*.66, a));
+      }
+      put('#f6d365', ellPath(f.x, f.y, r*.27, r*.27, 0));
+    }
+  }
+  return Object.keys(L).map(fill => `<path d="${L[fill].join('')}" fill="${fill}"/>`).join('');
+}
+
+/* 枯树配色 */
+const DEAD_LEAF = ['#9c8a68', '#b3a07a'];
+const DEAD_BARK = '#8a7a66';
+
+/* ---------- 统一下笔 ---------- */
+function drawShape(sh, sp, w, dead){
+  const col = sp.l || ['#3f7a49','#5ba55f','#a8dd7a'];
+  const F = sp.f;
+  let bark = '', leaf = '', bloom = '';
+
+  for(const sg of sh.segs){
+    if(sg.ord > w + .012) continue;
+    if(sg.trunk){
+      const { x0, y0, x1, y1, w0, w1 } = sg, h = y0 - y1;
+      bark += `<path d="M${(x0-w0/2).toFixed(1)},${y0}`
+            + ` C${(x0-w0*.18).toFixed(1)},${(y0-h*.46).toFixed(1)} ${(x1-w1*2.1).toFixed(1)},${(y1+h*.34).toFixed(1)} ${(x1-w1/2).toFixed(1)},${y1}`
+            + ` L${(x1+w1/2).toFixed(1)},${y1}`
+            + ` C${(x1+w1*2.1).toFixed(1)},${(y1+h*.34).toFixed(1)} ${(x0+w0*.18).toFixed(1)},${(y0-h*.46).toFixed(1)} ${(x0+w0/2).toFixed(1)},${y0} Z"`
+            + ` fill="${dead ? DEAD_BARK : sp.b}"/>`;
+    }else{
+      bark += `<path d="M${sg.x0.toFixed(1)},${sg.y0.toFixed(1)} Q${sg.cx.toFixed(1)},${sg.cy.toFixed(1)} ${sg.x1.toFixed(1)},${sg.y1.toFixed(1)}"`
+            + ` fill="none" stroke="${dead ? DEAD_BARK : sp.b}" stroke-width="${Math.max(.9, sg.w0).toFixed(2)}" stroke-linecap="round"/>`;
+    }
+  }
+
+  /* 树冠体块（在叶子和枝条之下） */
+  const NB = 6, mbuf = [];
+  for(let i=0;i<NB;i++) mbuf.push([]);
+  for(const m of sh.masses){
+    if(m.ord > w + .05) continue;
+    const g = clamp((w - m.ord) / m.grow, .25, 1);
+    const bi = dead ? (m.sd % 2) : Math.min(NB-1, Math.floor(clamp(m.tone, 0, 1) * NB));
+    const d = blobPath(m.x, m.y, m.r * g, m.sd);
+    if(d) mbuf[bi].push(d);
+  }
+  const mtones = [.02, .15, .28, .41, .54, .68];
+  for(let i=0;i<NB;i++){
+    if(!mbuf[i].length) continue;
+    const fill = dead ? DEAD_LEAF[i % 2] : rgb(mixc(col[0], col[2], mtones[i]));
+    leaf += `<path d="${mbuf[i].join('')}" fill="${fill}"/>`;
+  }
+
+  const nLeaf = dead ? Math.round(sh.leaves.length * .14) : sh.leaves.length;
+  const BUCKETS = 6, buf = [];
+  for(let i=0;i<BUCKETS;i++) buf.push([]);
+  for(let i=0;i<nLeaf;i++){
+    const lf = sh.leaves[i];
+    if(lf.ord > w) continue;
+    if(!dead && lf.stem && w > lf.fade) continue;
+    const bi = dead ? (i % 2) : Math.min(BUCKETS-1, Math.floor(clamp(lf.tone, 0, 1) * BUCKETS));
+    buf[bi].push(leafPath(lf.kind, lf.x, lf.y, lf.ang, lf.s));
+  }
+  if(dead){
+    leaf += `<path d="${buf[0].join('')}" fill="${DEAD_LEAF[0]}"/>`;
+    leaf += `<path d="${buf[1].join('')}" fill="${DEAD_LEAF[1]}"/>`;
+  }else{
+    const tones = [.34, .50, .66, .80, .92, 1];
+    for(let i=0;i<BUCKETS;i++){
+      if(!buf[i].length) continue;
+      leaf += `<path d="${buf[i].join('')}" fill="${rgb(mixc(col[0], col[2], tones[i]))}"/>`;
+    }
+  }
+
+  /* 花：先冒花苞，再开，从下往上依次开 */
+  if(F && !dead){
+    const budT  = clamp((w - .30) / (.62 - .30), 0, 1);
+    const flowT = clamp((w - .60) / (.86 - .60), 0, 1);
+    const bd = [], fd = [];
+    for(const t of sh.blooms){
+      if(t.ord > w) continue;
+      const r = (t.r || 4) * (F.s || 1);
+      if(t.bo <= flowT)     fd.push({ x:t.x, y:t.y, r, k:t.k });
+      else if(t.bo <= budT) bd.push(t);
+    }
+    if(bd.length){
+      let d = '';
+      for(const b of bd) d += ellPath(b.x, b.y, 1.9, 2.6, 0);
+      bloom += `<path d="${d}" fill="${F.c}"/>`;
+    }
+    if(fd.length) bloom += flowerPaths(F.k, fd, F.c);
+  }
+
+  return bark + leaf + bloom;
+}
+
+/* ---------- 竹丛 ---------- */
+function renderBamboo(w, sp, seed, dead){
+  const P = PP(sp.P);
+  const S = sizeOf(w);
+  const H = (P.h || 154) * S;
+  const n = Math.max(1, Math.round(1 + clamp(w, 0, 1) * ((P.n || 5) - 1)));
+  const D = P.l || ['#4a8a3a','#63a545','#96c765'];
+  let out = '';
+  for(let i=0;i<n;i++){
+    const bx = (i - (n-1)/2) * 13.5 * S;
+    const hh = H * (.60 + rnd(seed + i*13) * .40);
+    const lean = (rnd(seed + i*3) - .5) * 22;
+    const c = dead ? DEAD_BARK : (i % 2 ? D[1] : D[0]);
+    const Pt = t => [bx + lean*t*t*.9, -hh*t];
+    out += `<path d="M${bx.toFixed(1)},0 Q${Pt(.55)[0].toFixed(1)},${Pt(.55)[1].toFixed(1)} ${(bx+lean).toFixed(1)},${(-hh).toFixed(1)}"`
+         + ` fill="none" stroke="${c}" stroke-width="${((P.tw || 7.4)*S).toFixed(1)}" stroke-linecap="round"/>`;
+    for(let j=1;j<=4;j++){
+      const p = Pt(j/5);
+      out += `<path d="M${(p[0]-3.4*S).toFixed(1)},${p[1].toFixed(1)} L${(p[0]+3.4*S).toFixed(1)},${p[1].toFixed(1)}"`
+           + ` stroke="${dead ? 'rgba(90,74,54,.5)' : 'rgba(22,44,16,.32)'}" stroke-width="${(1.15*S).toFixed(2)}"/>`;
+    }
+    for(let j=0;j<3;j++){
+      const side = ((i + j) % 2) ? 1 : -1;
+      const p = Pt(.60 + j*.17);
+      const lc = dead ? DEAD_LEAF[j % 2] : (j % 2 ? D[2] : D[1]);
+      const lx = p[0] + side * 15 * S;
+      out += `<ellipse cx="${lx.toFixed(1)}" cy="${p[1].toFixed(1)}" rx="${((P.leafLen || 23)*S).toFixed(1)}" ry="${((P.leafW || 5.4)*S).toFixed(1)}"`
+           + ` transform="rotate(${(side*(28 + j*9)).toFixed(1)} ${lx.toFixed(1)} ${p[1].toFixed(1)})" fill="${lc}"/>`;
+    }
+    if(!dead){
+      const tp = Pt(1);
+      out += `<ellipse cx="${tp[0].toFixed(1)}" cy="${(tp[1] - 2.5*S).toFixed(1)}" rx="${(3.2*S).toFixed(1)}" ry="${(6.5*S).toFixed(1)}" fill="${D[2]}"/>`;
+    }
+  }
+  return out;
+}
+
+function renderAny(spIdx, w, seed, dead){
+  if(!(w > 0)) return '';
+  const N = SPECIES.length;
+  const i = ((spIdx % N) + N) % N;
+  const sp = SPECIES[i];
+  const a = sp.a;
+  const inner = (a === 'bamboo') ? renderBamboo(w, sp, seed, dead)
+    : drawShape(
+        (a === 'conifer' || a === 'column') ? shapeConifer(w, seed, sp)
+        : (a === 'shrub')                   ? shapeShrub(w, seed, sp)
+        :                                     shapeSpread(w, seed, sp),
+        sp, w, dead);
+  const k = fitOf(i);
+  return k === 1 ? inner : `<g transform="scale(${k})">${inner}</g>`;
+}
+
+
+return { SPECIES: SPECIES, FIT: FIT, fitOf: fitOf, renderAny: renderAny };
+})();
+
+
+/* ============================================================
+   小树林 —— 今日页那棵正在长的树 + 森林页
+   规则：某一天「所有习惯都完成」记一次全勤，全勤满 7 天长成一棵。
+        树完全由记录推导 —— 打卡就长一天，撤销就退一天，不再另存计数。
+        漏打一整天不会让树缩回去：累计口径本来就不统计那天，要等下次
+        打满才 +1；「眼看着归零从头爬」那种倒退不会发生。
+   ============================================================ */
+var TREE_CYCLE = 7;
+
+/* 引擎在 IIFE 里，这里取出来给下面的代码直接用 */
+var SPECIES = TREEW.SPECIES;
+
+/* 品种出场顺序：开局樱花，之后刻意让相邻几棵的造型 / 颜色都不一样 */
+var TREE_ORDER = [
+  21,  2, 41,  5, 13, 49, 10, 15,  1, 26,
+   7, 16, 29, 45, 39, 12,  4, 22, 46,  9,
+  19,  6, 43, 17,  8, 47, 23,  3, 27, 44,
+  20, 33, 18, 31, 42, 24, 32, 48, 38, 11,
+  34, 25, 30, 35, 14, 36, 40, 37, 28,  0
+];
+
+function speciesIdxAt(k) {
+  var L = TREE_ORDER.length;
+  return TREE_ORDER[((k % L) + L) % L];
+}
+function treeSeed(k) { return 137 * k + 29; }
+
+/* 历史上「所有习惯都完成」的天数 */
+function fullAttendDays() {
+  var hs = activeHabits();
+  if (!hs.length) return 0;
+  var set = {};
+  Object.keys(S.records).forEach(function (hid) {
+    Object.keys(S.records[hid]).forEach(function (d) { set[d] = 1; });
+  });
+  var days = Object.keys(set).sort();
+  if (!days.length) return 0;
+  var t = todayISO(), n = 0, d = days[0], guard = 0;
+  while (d <= t && guard++ < 4000) {
+    var ok = true;
+    for (var i = 0; i < hs.length; i++) { if (!isDone(hs[i], d)) { ok = false; break; } }
+    if (ok) n++;
+    d = addDays(d, 1);
+  }
+  return n;
+}
+function todayAllDone() {
+  var hs = activeHabits();
+  if (!hs.length) return false;
+  for (var i = 0; i < hs.length; i++) { if (!isDone(hs[i], todayISO())) return false; }
+  return true;
+}
+/* 树的当前状态。完全由记录推导，不存任何计数 */
+function treeState() {
+  var n = fullAttendDays();
+  var grown = Math.floor(n / TREE_CYCLE);   /* 已经长成的棵数 */
+  var cur = n % TREE_CYCLE;                 /* 这一棵长了几天；0 = 刚长满 */
+  var idx = cur === 0 ? grown - 1 : grown;  /* 屏幕上显示的是第几棵（0 起） */
+  return {
+    n: n, grown: grown, cur: cur, idx: idx,
+    full: (cur === 0 && grown > 0),
+    day: idx < 0 ? 0 : (cur === 0 ? TREE_CYCLE : cur),
+    spIdx: idx < 0 ? -1 : speciesIdxAt(idx)
+  };
+}
+function treeSVG(spIdx, w, k) {
+  if (spIdx < 0) return '';
+  return '<svg viewBox="-95 -175 190 190" aria-hidden="true">' +
+    TREEW.renderAny(spIdx, Math.max(.04, Math.min(1, w)), treeSeed(k), false) + '</svg>';
+}
+
+/* ---------- 今日页顶部 ---------- */
+function treeHero(done, total, mins) {
+  var T = treeState();
+  var C = 2 * Math.PI * 118;
+  var allDone = todayAllDone();
+  var w = T.spIdx < 0 ? 0 : T.day / TREE_CYCLE;
+  var ring = '<svg class="ring2" viewBox="0 0 252 252" aria-hidden="true">' +
+    '<circle class="rbg" cx="126" cy="126" r="118"></circle>' +
+    '<circle class="rfg" cx="126" cy="126" r="118" stroke-dasharray="' + C.toFixed(1) +
+    '" stroke-dashoffset="' + (C * (1 - w)).toFixed(1) + '"></circle></svg>';
+  var tail = '<div class="sum-l' + (allDone ? ' done' : '') + '">' +
+    (allDone ? '今天已打满 ✓' : '已完成 ' + done + '/' + total + (mins ? ' · ' + fmtMin(mins) : '')) +
+    '</div>';
+
+  var info;
+  if (T.spIdx < 0) {
+    info = '<div class="tsub">今天把 ' + total + ' 个习惯都完成，明天这里就会冒出一棵树</div>' + tail;
+  } else {
+    var nm = esc(SPECIES[T.spIdx].n);
+    info = '<div class="tday"><b>第 ' + T.day + '</b> / ' + TREE_CYCLE + ' 天</div>' +
+      (T.full ? '<div class="tsub full">🌸 ' + nm + '长成了！明天开始种下一棵</div>'
+              : '<div class="tsub">距离「' + nm + '」长成还差 ' + (TREE_CYCLE - T.day) + ' 天</div>') + tail;
+  }
+  return '<div class="thero">' +
+    '<div class="thering">' + ring + '<div class="thal"></div>' +
+      '<div class="ttree">' + treeSVG(T.spIdx, w, Math.max(0, T.idx)) + '</div></div>' +
+    info + '</div>';
+}
+
+/* ---------- 森林页 ---------- */
+function fcellHTML(spIdx, w, k, growing, day, fresh) {
+  return '<div class="fcell' + (growing ? ' growing' : '') + (fresh ? ' fresh' : '') + '">' +
+    '<div class="fday">' + (growing ? '第 ' + day + ' / ' + TREE_CYCLE + ' 天' : '&nbsp;') + '</div>' +
+    '<div class="ft">' + treeSVG(spIdx, w, k) + '</div>' +
+    '<div class="fn">' + esc(SPECIES[spIdx].n) + '</div></div>';
+}
+function renderForest() {
+  var T = treeState();
+  var h = '<h1 class="h1" style="margin-bottom:4px;text-align:center">森林</h1>';
+  h += '<p class="date" style="text-align:center;margin-bottom:20px">' +
+    (T.grown ? '已经长成 ' + T.grown + ' 棵' : '还没有长成的树') +
+    (T.spIdx >= 0 && !T.full ? ' · 还有 1 棵在长' : '') + '</p>';
+
+  if (T.spIdx < 0) {
+    h += '<div class="empty">今天把全部习惯都完成，明天这里就会冒出第一棵树<br>' +
+      '每 ' + TREE_CYCLE + ' 天长成一棵，50 个品种挨个种一遍</div>';
+    return h;
+  }
+  h += '<div class="fgrid">';
+  if (!T.full) h += fcellHTML(T.spIdx, T.day / TREE_CYCLE, T.idx, true, T.day, false);
+  for (var k = T.grown - 1; k >= 0; k--) {
+    h += fcellHTML(speciesIdxAt(k), 1, k, false, 0, T.full && k === T.grown - 1);
+  }
+  h += '</div>';
+  h += '<div class="foot">' + (T.full
+    ? '已经长成 ' + T.grown + ' 棵 · 回今日页看看正在种的那棵'
+    : '全勤满 ' + TREE_CYCLE + ' 天，这棵就长成进森林 · 累计全勤 ' + T.n + ' 天') + '</div>';
+  return h;
+}
+
 /* ============================================================
    渲染与事件
    ============================================================ */
 var tab = 'today';
 /* 导航顺序：记录(0) 今日(1) 我的(2) */
-var TAB_ORDER = ['records', 'today', 'mine'];
+var TAB_ORDER = ['records', 'today', 'forest', 'mine'];
 function moveThumb() {
   var idx = TAB_ORDER.indexOf(tab);
   if (idx < 0) idx = 1;
@@ -2022,7 +2954,10 @@ function moveThumb() {
   if (th) th.style.transform = 'translateX(' + (idx * 100) + '%)';
 }
 function render() {
-  var html = tab === 'today' ? renderToday() : (tab === 'records' ? renderRecords() : renderMine());
+  var html = tab === 'today' ? renderToday()
+           : tab === 'records' ? renderRecords()
+           : tab === 'forest' ? renderForest()
+           : renderMine();
   $('#view').innerHTML = html;
   $$('#tabbar button').forEach(function (b) { b.classList.toggle('on', b.dataset.tab === tab); });
   moveThumb();
@@ -2032,7 +2967,7 @@ function render() {
       var sum = $('.sum-l');
       if (sum && !sum.dataset.popped) {
         sum.dataset.popped = '1';
-        var card = $('.sum');
+        var card = $('.thering') || $('.thero') || $('.sum');
         card.classList.add('pop');
         setTimeout(function () { card.classList.remove('pop'); }, 460);
       }
