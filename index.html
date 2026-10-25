@@ -6,7 +6,7 @@
 <title>坚持</title>
 <meta name="theme-color" content="#F6F6F4">
 <meta name="description" content="健身 · 戒撸，只记录今天。一个屏幕，一个问题，一个按钮。">
-<meta name="app-version" content="v2.0">
+<meta name="app-version" content="v2.1">
 <link rel="manifest" href="./manifest.json">
 <link rel="icon" type="image/png" href="./icons/icon-192.png">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
@@ -46,6 +46,7 @@ body{
   font-weight:300;line-height:1.5;-webkit-font-smoothing:antialiased;
   overscroll-behavior-y:none;
 }
+body.locked{overflow:hidden}
 h1,h2,h3,h4,h5,h6,b,strong{font-weight:300}
 button,input,textarea{font-family:inherit;font-weight:300;color:inherit}
 button{cursor:pointer;border:0;background:none}
@@ -139,20 +140,6 @@ button{cursor:pointer;border:0;background:none}
 .danger{display:block;width:100%;margin-top:4px;padding:15px 0;border-radius:999px;background:rgba(255,255,255,.95);font-size:14.5px;color:#B4733F;border:1.4px dashed rgba(180,115,63,.25)}
 .foot{font-size:11.5px;color:var(--muted);text-align:center;margin-top:22px;line-height:1.8}
 
-/* ---------- 长成的树 ---------- */
-.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
-.gcard{
-  background:rgba(255,255,255,.95);border-radius:20px;padding:8px 6px 10px;text-align:center;
-  box-shadow:0 4px 14px rgba(26,26,26,.06);
-}
-.gcard svg{width:100%;height:78px;display:block}
-.gcard .gname{font-size:11.5px;font-weight:700;color:#4A5A48;margin-top:2px}
-.gcard .gdate{font-size:10px;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
-.gempty{
-  background:rgba(255,255,255,.95);border-radius:24px;padding:34px 20px;text-align:center;
-  font-size:13.5px;color:var(--muted);border:1.4px dashed rgba(26,26,26,.1);line-height:1.9;
-}
-
 /* ---------- 弹层 ---------- */
 .mask{position:fixed;inset:0;background:rgba(26,26,26,.34);z-index:50;opacity:0;pointer-events:none;transition:opacity .28s ease}
 .mask.in{opacity:1;pointer-events:auto}
@@ -216,6 +203,44 @@ button{cursor:pointer;border:0;background:none}
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* ---------- 森林 ---------- */
+#forestRoot{position:fixed;inset:0;z-index:60;pointer-events:none}
+#forestRoot.open,#forestRoot.closing{pointer-events:auto}
+.forestPage{
+  position:absolute;inset:0;background:radial-gradient(125% 58% at 50% 0%,#FCFCFA 0%,#F6F6F4 64%);
+  overflow-y:auto;-webkit-overflow-scrolling:touch;
+  transform:translateY(100%);transition:transform .34s cubic-bezier(.22,1,.36,1);
+}
+#forestRoot.open .forestPage{transform:translateY(0)}
+.forestWrap{
+  max-width:480px;margin:0 auto;
+  padding:calc(18px + env(safe-area-inset-top)) 18px calc(42px + env(safe-area-inset-bottom));
+}
+.forestTop{display:flex;align-items:center;gap:12px;min-height:40px}
+.forestBack{
+  width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.86);
+  box-shadow:0 2px 8px rgba(26,26,26,.06);display:grid;place-items:center;
+  font-size:22px;line-height:1;color:var(--muted);padding-bottom:2px;
+}
+.forestTitle{font-size:22px;letter-spacing:-.3px}
+.forestSub{font-size:12.5px;color:var(--muted);margin:8px 2px 22px}
+.forestGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.forestCard{
+  background:rgba(255,255,255,.78);border-radius:24px;padding:12px 10px 13px;
+  text-align:center;border:1.4px dashed rgba(26,26,26,.07);
+  box-shadow:0 5px 16px rgba(26,26,26,.05);
+}
+.forestArt{height:132px;display:grid;place-items:center}
+.forestArt svg{width:100%;height:132px;display:block;overflow:visible}
+.forestName{font-size:14.5px;line-height:1.4;margin-top:2px}
+.forestDays{font-size:11.5px;color:var(--muted);margin-top:3px}
+.forestEmpty{
+  background:rgba(255,255,255,.7);border-radius:24px;padding:34px 20px;
+  text-align:center;font-size:14px;color:var(--muted);line-height:1.9;
+  border:1.4px dashed rgba(26,26,26,.08);
+}
+.forestEmpty span{font-size:12px;color:#B0B0A9}
+
 @keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.045)}100%{transform:scale(1)}}
 .pop{animation:pop .5s ease}
 </style>
@@ -224,6 +249,7 @@ button{cursor:pointer;border:0;background:none}
 
 <div id="app"></div>
 <div id="sheetRoot"></div>
+<div id="forestRoot" aria-hidden="true"></div>
 <div id="toast"></div>
 
 <script>
@@ -1055,15 +1081,6 @@ function normalizeState(d) {
   d.fullDays = Math.max(0, parseInt(d.fullDays, 10) || 0);
   d.fullCounted = !!d.fullCounted;
   if (!Array.isArray(d.grown)) d.grown = [];
-  d.grown = d.grown.filter(function (g) {
-    return g && typeof g.sp === 'number' && g.sp >= 0 && g.sp < 50;
-  }).map(function (g) {
-    return {
-      sp: g.sp,
-      day: Math.max(0, parseInt(g.day, 10) || 0),
-      date: typeof g.date === 'string' ? g.date : ''
-    };
-  });
   if (!d.settings || typeof d.settings !== 'object') d.settings = { createdAt: d.today };
   d.habits.forEach(function (h, i) {
     h.id = h.id || ('h' + i);
@@ -1144,7 +1161,6 @@ function migrateV1(old) {
     checks: checks,
     fullDays: fullDays,
     fullCounted: fullCounted,
-    grown: [],
     settings: {
       createdAt: (old.settings && old.settings.createdAt) || t,
       migratedFromV1: true
@@ -1177,8 +1193,6 @@ save();
 if (S.settings && S.settings.migratedFromV1) {
   try { localStorage.removeItem(OLD_KEY); } catch (e) {}
 }
-syncFullDay();
-save();
 
 function activeHabits() {
   return S.habits.slice().sort(function (a, b) { return a.sort - b.sort; });
@@ -1194,27 +1208,22 @@ function allDone() {
 function remainingCount() {
   return activeHabits().filter(function (h) { return !isChecked(h); }).length;
 }
-/* 今天是否「全部完成」决定全勤 +1 / -1。
-   漏打一整天什么也不会发生：累计不变，树只是暂停。
-   长成的树会记进 S.grown —— 只增不减，撤销今天不会把树收回去。 */
+/* 今天是否「全部完成」决定累计天数 +1 / -1。
+   漏打一整天什么也不会发生：累计不变，树只是暂停。 */
 function syncFullDay() {
   var all = allDone();
-  if (all && !S.fullCounted) { S.fullDays++; S.fullCounted = true; recordGrown(); return 1; }
-  if (!all && S.fullCounted) { S.fullDays = Math.max(0, S.fullDays - 1); S.fullCounted = false; return -1; }
+  if (all && !S.fullCounted) {
+    S.fullDays++;
+    S.fullCounted = true;
+    syncGrown(S.today);
+    return 1;
+  }
+  if (!all && S.fullCounted) {
+    S.fullDays = Math.max(0, S.fullDays - 1);
+    S.fullCounted = false;
+    return -1;
+  }
   return 0;
-}
-/* 累计天数刚好走到 7 的整数倍时，把这一棵记下来。
-   同一棵不会记两次：按「第几次长成」去重。 */
-function recordGrown() {
-  var n = S.fullDays;
-  if (n <= 0 || n % TREE_CYCLE !== 0) return;
-  var k = n / TREE_CYCLE;                 // 这是第 k 棵
-  if (S.grown.length >= k) return;        // 已经记过
-  S.grown.push({
-    sp: speciesIdxAt(k - 1),
-    day: TREE_CYCLE,
-    date: todayISO()
-  });
 }
 /* 换了一天：只清掉「今天做没做」，累计天数原样保留。 */
 function ensureToday() {
@@ -1230,7 +1239,7 @@ function ensureToday() {
 }
 
 /* ============================================================
-   树的推导：累计全勤天数 → 第几棵 / 长了几天
+   树的推导：累计天数 → 第几棵 / 长了几天
    ============================================================ */
 var SPECIES = TREEW.SPECIES;
 var TREE_ORDER = [
@@ -1244,6 +1253,25 @@ function speciesIdxAt(k) {
   var L = TREE_ORDER.length;
   return TREE_ORDER[((k % L) + L) % L];
 }
+/* 长成的树只增不减。撤销今天只撤销勾，不收回已经长成的树。
+   旧状态没有 grown 记录时，按累计天数补上；补的记录没有日期。 */
+function syncGrown(dateForNew) {
+  if (!Array.isArray(S.grown)) S.grown = [];
+  var need = Math.floor(S.fullDays / TREE_CYCLE);
+  while (S.grown.length < need) {
+    var k = S.grown.length;
+    S.grown.push({
+      sp: speciesIdxAt(k),
+      day: TREE_CYCLE,
+      date: dateForNew || null
+    });
+  }
+}
+syncGrown();
+ensureToday();
+syncFullDay();
+syncGrown();
+save();
 function treeSeed(k) { return 137 * k + 29; }
 function treeState() {
   var n = S.fullDays;
@@ -1299,18 +1327,18 @@ function renderHero() {
   if (T.spIdx < 0) {
     main = '还没有树';
     sub = hs.length
-      ? '今天把 ' + hs.length + ' 个习惯都完成，就会种下第一棵'
+      ? '今天把 ' + hs.length + ' 个习惯都记好，就会种下第一棵'
       : '先添加一个习惯';
   } else if (T.full) {
     main = '🌸 ' + esc(SPECIES[T.spIdx].n) + '长成了';
     if (!hs.length) { sub = '先添加一个习惯'; }
-    else if (all) { sub = '今天已打满 · 明天开始种下一棵'; subCls = ' done'; }
-    else { sub = '新树先停着 · 今天还有 ' + remainingCount() + ' 个没记'; subCls = ' paused'; }
+    else if (all) { sub = '今天都记好了 · 明天开始种下一棵'; subCls = ' done'; }
+    else { sub = '新树暂停 · 今天还有 ' + remainingCount() + ' 个没记'; subCls = ' paused'; }
   } else {
     main = '第 ' + T.day + ' / ' + TREE_CYCLE + ' 天 · ' + esc(SPECIES[T.spIdx].n);
     if (!hs.length) { sub = '先添加一个习惯'; }
-    else if (all) { sub = '今天已打满 · 树又长了一天'; subCls = ' done'; }
-    else { sub = '树先停着 · 今天还有 ' + remainingCount() + ' 个没记'; subCls = ' paused'; }
+    else if (all) { sub = '今天都记好了 · 树又长了一天'; subCls = ' done'; }
+    else { sub = '树暂停生长 · 今天还有 ' + remainingCount() + ' 个没记'; subCls = ' paused'; }
   }
 
   return '<div class="hero">' +
@@ -1380,7 +1408,7 @@ function toggleHabit(hid) {
   if (!was && delta > 0) {
     var T = treeState();
     if (T.full) toast('🌸 ' + SPECIES[T.spIdx].n + '长成了');
-    else toast('今天全部完成 · 树又长了一天');
+    else toast('今天都记好了 · 树又长了一天');
     pulseHero();
   } else if (!was) {
     toast('已记下 · 累计 ' + h.total + ' 天');
@@ -1418,20 +1446,25 @@ function openSettings() {
     '<div class="sect2">习惯</div>' +
     '<div class="list">' + rows + '</div>' +
     '<button class="addbtn" data-act="addHabit">＋ 添加习惯</button>' +
-    '<div class="sect2">长成的树</div>' +
-    '<button class="lrow" data-act="grown"><span class="lmain"><span class="lname">已经种出来的树</span>' +
-      '<span class="lsub">' + (S.grown.length ? S.grown.length + ' 棵' : '还没有') + '</span></span>' +
-      '<span class="larr">›</span></button>' +
+    '<div class="sect2">森林</div>' +
+    '<div class="list">' +
+      '<button class="lrow" data-act="openForest">' +
+        '<span class="lico" style="--cardbg:#EDF5E1">🌳</span>' +
+        '<span class="lmain"><span class="lname">长成的树</span>' +
+        '<span class="lsub">按长成的顺序</span></span>' +
+        '<span class="larr">›</span>' +
+      '</button>' +
+    '</div>' +
     '<div class="sect2">数据</div>' +
     '<button class="danger" data-act="clearAll">清空所有数据</button>' +
-    '<div class="foot">v2.0 · 数据只保存在这台设备<br>漏打只会暂停，不会清零</div>';
+    '<div class="foot">v2.1 · 数据只保存在这台设备<br>漏打只会暂停，不会清零</div>';
 
   openSheet(html, function (e) {
     var el = e.target.closest('[data-act]');
     if (!el) return;
     if (el.dataset.act === 'editHabit') { openEditor(el.dataset.hid); return; }
     if (el.dataset.act === 'addHabit') { openEditor(null); return; }
-    if (el.dataset.act === 'grown') { openGrown(); return; }
+    if (el.dataset.act === 'openForest') { openForest(); return; }
     if (el.dataset.act === 'clearAll') { clearAll(); return; }
   });
 }
@@ -1571,36 +1604,70 @@ function clearAll() {
 }
 
 /* ============================================================
-   长成的树 · 总览
-   只显示已经长成的，不显示总数、不显示未获得的空位。
-   这是「我有什么」，不是「我缺什么」。
+   森林
    ============================================================ */
-function openGrown() {
-  var list = (S.grown || []).slice().reverse();   // 最近长成的排前面
-  var body;
+var forestTimer;
+function forestSpecies(rec, i) {
+  var sp = rec && typeof rec.sp === 'number' ? rec.sp : speciesIdxAt(i);
+  if (!SPECIES[sp]) sp = speciesIdxAt(i);
+  return sp;
+}
+function renderForestBody() {
+  var list = Array.isArray(S.grown) ? S.grown : [];
   if (!list.length) {
-    body = '<div class="gempty">还没有长成的树<br>慢慢来，它自己会长</div>';
-  } else {
-    body = '<div class="ggrid">' + list.map(function (g, i) {
-      return '<div class="gcard">' +
-        '<svg viewBox="-95 -175 190 190" aria-hidden="true">' +
-          TREEW.renderAny(g.sp, 1, 137 * (list.length - i) + 29) +
-        '</svg>' +
-        '<div class="gname">' + esc(SPECIES[g.sp].n) + '</div>' +
-        (g.date ? '<div class="gdate">' + esc(fmtDate(g.date).replace(' ', ' · ')) + '</div>' : '') +
-      '</div>';
-    }).join('') + '</div>';
+    return '<div class="forestEmpty">还没有树长成<br><span>长成之后，会留在这里</span></div>';
   }
-
-  openSheet(
-    '<div class="grip"></div>' +
-    '<div class="shtitle">长成的树</div>' +
-    '<div class="shsub">' + (list.length ? '这些是你已经种出来的。' : '') + '</div>' +
-    body,
-    null, null
-  );
+  return '<div class="forestGrid">' + list.map(function (r, i) {
+    var sp = forestSpecies(r, i);
+    var days = Math.max(1, parseInt(r && r.day, 10) || TREE_CYCLE);
+    return '<div class="forestCard">' +
+      '<div class="forestArt"><svg viewBox="-95 -175 190 190" aria-hidden="true">' +
+        TREEW.renderAny(sp, 1, treeSeed(i)) +
+      '</svg></div>' +
+      '<div class="forestName">' + esc(SPECIES[sp].n) + '</div>' +
+      '<div class="forestDays">长了 ' + days + ' 天</div>' +
+      '</div>';
+  }).join('') + '</div>';
+}
+function openForest() {
+  clearTimeout(forestTimer);
+  var root = $('#forestRoot');
+  root.classList.remove('closing');
+  root.innerHTML = '<div class="forestPage"><div class="forestWrap">' +
+    '<div class="forestTop">' +
+      '<button class="forestBack" data-act="closeForest" aria-label="返回">‹</button>' +
+      '<div class="forestTitle">森林</div>' +
+    '</div>' +
+    '<div class="forestSub">按长成的顺序</div>' +
+    renderForestBody() +
+    '</div></div>';
+  root.setAttribute('aria-hidden', 'false');
+  void root.offsetHeight;
+  root.classList.add('open');
+  document.body.classList.add('locked');
+  root.onclick = function (e) {
+    if (e.target.closest('[data-act="closeForest"]')) closeForest();
+  };
+}
+function closeForest() {
+  var root = $('#forestRoot');
+  root.classList.remove('open');
+  root.classList.add('closing');
+  root.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('locked');
+  clearTimeout(forestTimer);
+  forestTimer = setTimeout(function () {
+    if (!root.classList.contains('open')) {
+      root.classList.remove('closing');
+      root.innerHTML = '';
+      root.onclick = null;
+    }
+  }, 360);
 }
 
+/* ============================================================
+   弹层 / 对话框 / toast
+   ============================================================ */
 var sheetTimer;
 function openSheet(inner, onEvent, onInit) {
   clearTimeout(sheetTimer);
